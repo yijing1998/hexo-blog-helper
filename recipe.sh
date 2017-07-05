@@ -56,7 +56,7 @@ get_git_ufiles()
 	fi
 }
 
-hexo_init()
+init_hexo()
 {
 	if [ -d $hfolder ]; then
 		echo "Can't init hexo in local folder: $hfolder, it's already exist, please remove it manually."

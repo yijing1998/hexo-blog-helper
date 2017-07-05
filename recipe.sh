@@ -7,11 +7,11 @@
 rfolder=`pwd`
 tfolder='themes'
 : ${trepos:="
-	next|https://github.com/yijing1998.abc.git|branch
-	test|https://a.b.c|xyz
+	next|https://github.com/yijing1998/hexo-theme-next.git|privateblog
+	landscape|https://github.com/hexojs/hexo-theme-landscape.git|master
 "}
 ufolder='ufiles'
-urepo='urepo|https://github.com/yijing1998|branch'
+urepo='urepo|https://github.com/yijing1998/hexo-ufiles.git|master'
 urepopath=$ufolder/${urepo%%|*}
 hfolder='hexofolder'
 

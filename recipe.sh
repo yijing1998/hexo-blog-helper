@@ -1,8 +1,6 @@
 #!/bin/bash
 
-# Set hexo working environment, including hexo platform, user blog souce file,
-# varity setting files, symbolic files to tie hexo platform with existing user 
-# files
+# init hexo, get upstream hexo themes, create symbolic links to make hexo work properly with user's source files and config files
 
 rfolder=`pwd`
 tfolder='themes'

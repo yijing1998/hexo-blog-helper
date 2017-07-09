@@ -60,6 +60,10 @@ init_hexo()
 		echo "Can't init hexo in local folder: $hfolder, it's already exist, please remove it manually."
 	else
 		hexo init $hfolder
+		#plugin
+		cd $hfolder
+		npm install hexo-deployer-git --save
+		cd $rfolder
 	fi
 }
 

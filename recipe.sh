@@ -5,12 +5,11 @@
 rfolder=`pwd`
 tfolder='themes'
 : ${trepos:="
-	next|https://github.com/yijing1998/hexo-theme-next.git|privateblog
+	next|https://github.com/yijing1998/hexo-theme-next.git|master
 	landscape|https://github.com/hexojs/hexo-theme-landscape.git|master
 "}
 ufolder='ufiles'
-urepo='urepo|https://github.com/yijing1998/hexo-ufiles.git|master'
-urepopath=$ufolder/${urepo%%|*}
+urepo='https://github.com/yijing1998/hexo-ufiles.git|master'
 hfolder='hexofolder'
 
 check_git_repo()
@@ -40,15 +39,14 @@ get_git_themes()
 get_git_ufiles()
 {
 	arr=(${urepo//|/ })
-	tar=$ufolder/${arr[0]}
 	#check user repo folder's existance
-	if [ -d $tar ]; then
-		echo "Can't overwrite local folder: $tar, please remove it manually."
+	if [ -d $ufolder ]; then
+		echo "Can't overwrite local folder: $ufolder, please remove it manually. Or use other command."
 	else
-		git clone ${arr[1]} $tar
+		git clone ${arr[0]} $ufolder
 		if [ $? -eq 0 ]; then
-			cd $tar
-			git checkout ${arr[2]}
+			cd $ufolder
+			git checkout ${arr[1]}
 			cd $rfolder
 		fi
 	fi
@@ -75,7 +73,7 @@ link_things()
 	cd $hfolder
 	ln -s ../_config.yml _config.yml
 	ln -s ../$tfolder themes
-	ln -s ../$urepopath source
+	ln -s ../$ufolder source
 	cd $rfolder
 }
 

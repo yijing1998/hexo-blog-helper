@@ -92,6 +92,7 @@ init_all()
 	link_things
 }
 
+# create a new post according to the last post's name
 new_post()
 {
 	# existance check

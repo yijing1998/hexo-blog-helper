@@ -132,9 +132,11 @@ new_post()
 	cd $rfolder
 }
 
-last_post()
+hexo_start()
 {
-	:
+	cd $hfolder
+	hexo server
+	cd $rfolder
 }
 
 usage()
@@ -148,6 +150,10 @@ if [ $# -eq 1 ]; then
 		init )
 			# init
 			init_all
+			;;
+		server )
+			# start hexo server
+			hexo_start
 			;;
 		* )
 			usage

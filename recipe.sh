@@ -132,10 +132,17 @@ new_post()
 	cd $rfolder
 }
 
-hexo_start()
+hexo_server()
 {
 	cd $hfolder
 	hexo server
+	cd $rfolder
+}
+
+hexo_deploy()
+{
+	cd $hfolder
+	hexo deploy
 	cd $rfolder
 }
 
@@ -153,7 +160,10 @@ if [ $# -eq 1 ]; then
 			;;
 		server )
 			# start hexo server
-			hexo_start
+			hexo_server
+			;;
+		deploy )
+			hexo_deploy
 			;;
 		* )
 			usage

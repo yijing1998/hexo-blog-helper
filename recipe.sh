@@ -11,6 +11,12 @@ tfolder='themes'
 ufolder='ufiles'
 urepo='https://github.com/yijing1998/hexo-ufiles.git|master'
 hfolder='hexofolder'
+osname=`uname -o`
+
+# enable native symbolic link for mingw in windows
+if [ $osname = "Msys" ]; then
+	export MSYS=winsymlinks:native
+fi
 
 check_git_repo()
 {

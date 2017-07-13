@@ -77,7 +77,7 @@ link_things()
 	rm -rf $hfolder/themes
 	rm -rf $hfolder/source
 	cd $hfolder
-	ln -s ../_config.yml _config.yml
+	ln -s ../$ufolder/.hexo_config.yml _config.yml
 	ln -s ../$tfolder themes
 	ln -s ../$ufolder source
 	cd $rfolder

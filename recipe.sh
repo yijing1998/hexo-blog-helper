@@ -20,7 +20,8 @@ fi
 
 check_git_repo()
 {
-	:
+	gstatus=`git status -s`
+	#echo ${gstatus:0:5}
 }
 
 get_git_themes()
@@ -96,12 +97,12 @@ init_all()
 new_post()
 {
 	# existance check
-	if [ ! -d $urepopath ]; then
+	if [ ! -d $ufolder ]; then
 		echo No user repo files found! Try \'recipe git urepo\'.
 		return
 	fi
 
-	popath="$urepopath/_posts"
+	popath="$ufolder/_posts"
 	daystr=`date "+%Y-%m-%d"`
 
   tmpcnt=`find $popath -maxdepth 1 -name "$daystr*" | wc -w`
@@ -117,7 +118,6 @@ new_post()
 			mnum=${tmpstr#*o}
 		fi
 		mnum=$[mnum+1]
-		echo $mnum;
 		if [ $mnum -lt 10 ]; then
 			pname="o0"${mnum}
 		elif [ $mnum -lt 100 ]; then
@@ -150,6 +150,8 @@ hexo_deploy()
 usage()
 {
 	echo 'Entering usage()'
+	# test
+	check_git_repo $ufolder
 }
 
 # really do sth

@@ -2,7 +2,7 @@
 
 # init hexo, get upstream hexo themes, create symbolic links to make hexo work properly with user's source files and config files
 
-rfolder=`pwd`
+# user settings --- begin --- #
 tfolder='themes'
 : ${trepos:="
 	next|https://github.com/yijing1998/hexo-theme-next.git|master
@@ -11,6 +11,12 @@ tfolder='themes'
 ufolder='ufiles'
 urepo='https://github.com/yijing1998/hexo-ufiles.git|master'
 hfolder='hexofolder'
+# user settings --- end --- #
+
+# calculate some usable variables
+rfolder=`pwd`
+urepo_url=${urepo%|*}
+urepo_branch=${urepo#*|}
 osname=`uname -o`
 
 # enable native symbolic link for mingw in windows
@@ -18,10 +24,56 @@ if [ $osname = "Msys" ]; then
 	export MSYS=winsymlinks:native
 fi
 
-check_git_repo()
+# $1: target folder
+# $2: repo url
+# $3: repo branch
+# return:
+check_repo_status()
 {
-	gstatus=`git status -s`
-	#echo ${gstatus:0:5}
+	# params check
+	if [ $# -ne 3 ]; then
+		echo 0
+		return
+	fi
+
+	# folder existance check
+	if [ ! -d $1 ]; then
+		echo 1
+		return
+	fi
+
+	# git status check
+	# bad substitution, anyone tell me why
+	cd $1 > /dev/null; gstatus=`git status -s`
+	# folder exist but no git repo
+	if [ ! $? -eq 0 ]; then
+		echo 2
+		return
+	fi
+
+	# now it's still in the path of $1
+  # get remote name and check if working place is clean
+	flag=0
+	rname=""
+
+	while read line; do
+		tmp=`echo $line | grep -o "[[:space:]].*[[:space:]]"`
+		if [ `echo $tmp` = $urepo_url ]; then
+			rname=${line%%[[:space:]]*}
+			flag=1
+		fi
+	done <<EOF
+	`git remote -v`
+EOF
+
+	# wrong remote url
+  if [ $flag -eq 0 ]; then
+		echo 3
+		return
+	fi
+	echo $rname
+	echo $urepo_url
+  echo $flag
 }
 
 get_git_themes()
@@ -151,7 +203,7 @@ usage()
 {
 	echo 'Entering usage()'
 	# test
-	check_git_repo $ufolder
+	check_repo_status $ufolder $urepo_url $urepo_branch
 }
 
 # really do sth

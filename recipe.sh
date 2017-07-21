@@ -140,6 +140,26 @@ E_O_F
 	echo 10
 }
 
+# install crontab for current user
+# auto deploy according to remote ufiles changes
+#
+task_install()
+{
+	if [ $osname = "Msys" ]; then
+		echo "can't support msys, please run in *unix"
+		return
+	fi
+  tsklist=`crontab -l`
+
+	# check if is installed
+  echo $tsklist
+
+	# install crontab
+	crontab <<E_O_F
+	*/30 * * * * ~/$rfolder/recipe.sh task deploy
+E_O_F
+}
+
 task_deploy()
 {
 	gcode=`check_repo_status $ufolder $urepo_url $urepo_branch`
@@ -155,8 +175,7 @@ task_deploy()
 	fi
 
 	# do deploy
-	# hexo_deploy
-	echo "pretend to deploy"
+	hexo_deploy
 }
 
 get_git_themes()
@@ -313,6 +332,16 @@ elif [ $# -eq 2 ]; then
 				post )
 					# new post
 					new_post
+					;;
+				* )
+					usage
+					;;
+			esac
+			;;
+		task )
+			case $2 in
+				install )
+					task_install
 					;;
 				* )
 					usage

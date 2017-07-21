@@ -24,12 +24,34 @@ if [ $osname = "Msys" ]; then
 	export MSYS=winsymlinks:native
 fi
 
+# check and change to approot if needed
+chch_approot()
+{
+	if [ ! $rfolder = "`pwd`" ]; then
+		cd $rfolder $1 > /dev/null
+	fi
+}
+
 # $1: target folder
 # $2: repo url
 # $3: repo branch
 # return:
+# 0 params error
+# 1 folder not exist
+# 2 no git repo in the folder
+# 3 current branch is not clean
+# 4 can't change to target branch
+# 5 given url not match any git remote url
+# 6 can't fetch remote branch
+# 7 is ahead of
+# 8 is behind
+# 9 is up-to-date
+# 10 unknown status
+# side effect: current dir perhaps changed, checkout local branch and fetched remote branch
 check_repo_status()
 {
+	chch_approot
+
 	# params check
 	if [ $# -ne 3 ]; then
 		echo 0
@@ -43,37 +65,95 @@ check_repo_status()
 	fi
 
 	# git status check
-	# bad substitution, anyone tell me why
 	cd $1 > /dev/null; gstatus=`git status -s`
 	# folder exist but no git repo
-	if [ ! $? -eq 0 ]; then
+	if [ $? -ne 0 ]; then
 		echo 2
 		return
 	fi
 
 	# now it's still in the path of $1
-  # get remote name and check if working place is clean
+  # check if current branch is clean
+	if [ ! "$gstatus" = "" ]; then
+		echo 3
+		return
+	fi
+
+	# can't change to target branch: perhaps wrong branch name
+	git checkout $urepo_branch &> /dev/null
+	if [ $? -ne 0 ]; then
+		echo 4
+		return
+	fi
+
 	flag=0
 	rname=""
-
 	while read line; do
 		tmp=`echo $line | grep -o "[[:space:]].*[[:space:]]"`
 		if [ `echo $tmp` = $urepo_url ]; then
 			rname=${line%%[[:space:]]*}
 			flag=1
 		fi
-	done <<EOF
+	done <<E_O_F
 	`git remote -v`
-EOF
+E_O_F
 
 	# wrong remote url
   if [ $flag -eq 0 ]; then
-		echo 3
+		echo 5
 		return
 	fi
-	echo $rname
-	echo $urepo_url
-  echo $flag
+
+	# check remote repo's commit
+	# git remote error: perhaps network
+	git fetch $rname $urepo_branch &> /dev/null
+	if [ $? -ne 0 ]; then
+		echo 6
+		return
+	fi
+
+	# get commits difference between local repo and remote repo
+	gstatus=`git status`
+	tmp=`echo "$gstatus" | grep -o "is ahead of"`
+	if [ "$tmp" = "is ahead of" ]; then
+		# is ahead of
+		echo 7
+		return
+	fi
+
+	tmp=`echo "$gstatus" | grep -o "is behind of"`
+	if [ "$tmp" = "is behind" ]; then
+		# is behind
+		echo 8
+		return
+	fi
+
+	tmp=`echo "$gstatus" | grep -o "is up-to-date"`
+	if [ "$tmp" = "is up-to-date" ]; then
+		# is up-to-date
+		echo 9
+		return
+	fi
+
+	# can be here
+	echo 10
+}
+
+task_deploy()
+{
+	gcode=`check_repo_status $ufolder $urepo_url $urepo_branch`
+	if [ $gcode -ne 8 ]; then
+		return
+	fi
+
+	# do merge since FETCH_HEAD is updated
+	git merge FETCH_HEAD &> /dev/null
+	if [ $? -ne 0 ]; then
+		return
+	fi
+
+	# do deploy
+	hexo_deploy
 }
 
 get_git_themes()
@@ -194,16 +274,15 @@ hexo_server()
 
 hexo_deploy()
 {
-	cd $hfolder
-	hexo deploy
-	cd $rfolder
+	cd $rfolder > /dev/null; cd $hfolder > /dev/null
+	echo "cleaning hexo cache"; hexo clean &> /dev/null
+	echo "begin hexo deploy"; hexo deploy &> /dev/null; echo "end hexo deploy"
 }
 
 usage()
 {
 	echo 'Entering usage()'
-	# test
-	check_repo_status $ufolder $urepo_url $urepo_branch
+	task_deploy
 }
 
 # really do sth

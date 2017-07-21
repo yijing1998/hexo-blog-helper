@@ -106,6 +106,7 @@ E_O_F
 
 	# check remote repo's commit
 	# git remote error: perhaps network
+	# echo 1>&2 `pwd`
 	git fetch $rname $urepo_branch &> /dev/null
 	if [ $? -ne 0 ]; then
 		echo 6
@@ -121,7 +122,7 @@ E_O_F
 		return
 	fi
 
-	tmp=`echo "$gstatus" | grep -o "is behind of"`
+	tmp=`echo "$gstatus" | grep -o "is behind"`
 	if [ "$tmp" = "is behind" ]; then
 		# is behind
 		echo 8
@@ -142,10 +143,11 @@ E_O_F
 task_deploy()
 {
 	gcode=`check_repo_status $ufolder $urepo_url $urepo_branch`
+	chch_approot; cd $ufolder 1> /dev/null
+  echo 1>&2 `pwd`
 	if [ $gcode -ne 8 ]; then
 		return
 	fi
-
 	# do merge since FETCH_HEAD is updated
 	git merge FETCH_HEAD &> /dev/null
 	if [ $? -ne 0 ]; then
@@ -153,7 +155,8 @@ task_deploy()
 	fi
 
 	# do deploy
-	hexo_deploy
+	# hexo_deploy
+	echo "pretend to deploy"
 }
 
 get_git_themes()

@@ -11,6 +11,7 @@ tfolder='themes'
 ufolder='ufiles'
 urepo='https://github.com/yijing1998/hexo-ufiles.git|master'
 hfolder='hexofolder'
+tasktimer="30 * * * *"
 # user settings --- end --- #
 
 # calculate some usable variables
@@ -18,6 +19,7 @@ rfolder=`pwd`
 urepo_url=${urepo%|*}
 urepo_branch=${urepo#*|}
 osname=`uname -o`
+taskcmd="cd $rfolder && ./recipe.sh task deploy"
 
 # enable native symbolic link for mingw in windows
 if [ $osname = "Msys" ]; then
@@ -73,7 +75,7 @@ check_repo_status()
 	fi
 
 	# now it's still in the path of $1
-  # check if current branch is clean
+	# check if current branch is clean
 	if [ ! "$gstatus" = "" ]; then
 		echo 3
 		return
@@ -95,11 +97,11 @@ check_repo_status()
 			flag=1
 		fi
 	done <<E_O_F
-	`git remote -v`
+`git remote -v`
 E_O_F
 
 	# wrong remote url
-  if [ $flag -eq 0 ]; then
+	if [ $flag -eq 0 ]; then
 		echo 5
 		return
 	fi
@@ -140,37 +142,82 @@ E_O_F
 	echo 10
 }
 
-# install crontab for current user
-# auto deploy according to remote ufiles changes
-#
+# install crontab task for current user
+# task: auto fire task_deploy
 task_install()
 {
 	if [ $osname = "Msys" ]; then
 		echo "can't support msys, please run in *unix"
 		return
 	fi
-  tsklist=`crontab -l`
+	tsklist=`crontab -l 2> /dev/null`
 
 	# check if is installed
-  echo $tsklist
+	tmp=`echo "$tsklist" | grep -o "recipe.sh task deploy"`
+	if [ "$tmp" = "recipe.sh task deploy" ]; then
+		echo "do nothing: task was installed"
+		return
+	fi
 
+	tmp=`echo $tsklist`
 	# install crontab
+	if [ "$tmp" = "" ]; then
+		echo "task installed."
+		crontab <<E_O_F
+$tasktimer $taskcmd
+E_O_F
+	else
+		echo "task installed with other tasks"
+		crontab <<E_O_F
+`echo "$tsklist"`
+$tasktimer $taskcmd
+E_O_F
+	fi
+}
+
+# remove crontab task for current user
+task_uninstall()
+{
+	if [ $osname = "Msys" ]; then
+		echo "can't support msys, please run in *unix"
+		return
+	fi
+	tsklist=`crontab -l 2> /dev/null`
+
+	# check empty list
+	tmp=`echo $tsklist`
+	if [ "$tmp" = "" ]; then
+		echo "do nothing: empty task list"
+		return
+	fi
+
+	# remove crontab task
+	tmp=`echo "$tsklist" | sed '/recipe.sh task deploy/d'`
+	if [ "$tmp" = "" ]; then
+		echo "task removed: only one"
+		crontab -r
+		return
+	fi
+	echo "task removed: side by side"
 	crontab <<E_O_F
-	*/30 * * * * ~/$rfolder/recipe.sh task deploy
+`echo "$tmp"`
 E_O_F
 }
 
+# deploy according to remote ufiles changes
 task_deploy()
 {
 	gcode=`check_repo_status $ufolder $urepo_url $urepo_branch`
-	chch_approot; cd $ufolder 1> /dev/null
-  echo 1>&2 `pwd`
 	if [ $gcode -ne 8 ]; then
+		echo "do nothing: gcode is $gcode"
 		return
 	fi
+
 	# do merge since FETCH_HEAD is updated
+	chch_approot; cd $ufolder 1> /dev/null
 	git merge FETCH_HEAD &> /dev/null
 	if [ $? -ne 0 ]; then
+		echo "git merge error: perhaps local branch is not clean"
 		return
 	fi
 
@@ -232,7 +279,7 @@ link_things()
 	rm -rf $hfolder/themes
 	rm -rf $hfolder/source
 	cd $hfolder
-	ln -s ../$ufolder/.hexo_config.yml _config.yml
+	ln -s ../$ufolder/_config.yml _config.yml
 	ln -s ../$tfolder themes
 	ln -s ../$ufolder source
 	cd $rfolder
@@ -259,7 +306,7 @@ new_post()
 	popath="$ufolder/_posts"
 	daystr=`date "+%Y-%m-%d"`
 
-  tmpcnt=`find $popath -maxdepth 1 -name "$daystr*" | wc -w`
+	tmpcnt=`find $popath -maxdepth 1 -name "$daystr*" | wc -w`
 
 	pname=''
 	if [ $tmpcnt -eq 0 ]; then
@@ -287,6 +334,31 @@ new_post()
 	cd $rfolder
 }
 
+# check hexo installation and initialization
+# do check under current folder: pwd
+# return
+# 0: not installed
+# 1: installed but not initialized
+# 2: installed and initialized
+hexo_check()
+{
+	msg=`hexo 2> /dev/null`
+	# not installed
+	if [ $? -ne 0 ]; then
+		echo 0
+		return
+	fi
+
+	tmp=`echo $msg | grep -o "clean"`
+	if [ ! "$tmp" = "clean" ]; then
+		# not initialized
+		echo 1
+	else
+		# initialized
+		echo 2
+	fi
+}
+
 hexo_server()
 {
 	cd $hfolder
@@ -296,15 +368,38 @@ hexo_server()
 
 hexo_deploy()
 {
-	cd $rfolder > /dev/null; cd $hfolder > /dev/null
+	cd $rfolder &> /dev/null && cd $hfolder &> /dev/null
+	if [ $? -ne 0 ]; then
+		echo "error: hexo working folder do not exist, forgot to run 'recipe.sh init' or some other recipes?"
+		return
+	fi
+
+	tmp=`hexo_check`
+	case $tmp in
+		0 )
+			echo "error: hexo is not installed"
+			return
+			;;
+		1 )
+			echo "error: hexo is not initialized, run 'hexo init' or some recipes"
+			return
+			;;
+	esac
+
 	echo "cleaning hexo cache"; hexo clean &> /dev/null
-	echo "begin hexo deploy"; hexo deploy &> /dev/null; echo "end hexo deploy"
+	if [ $? -ne 0 ]; then
+		echo "error: hexo clean is not ok"
+		return
+	fi
+	echo "begin hexo deploy"; hexo deploy &> /dev/null && echo "end hexo deploy"
+	if [ $? -ne 0 ]; then
+		echo "error: hexo deploy failed, perhaps network problems"
+	fi
 }
 
 usage()
 {
 	echo 'Entering usage()'
-	task_deploy
 }
 
 # really do sth
@@ -342,6 +437,12 @@ elif [ $# -eq 2 ]; then
 			case $2 in
 				install )
 					task_install
+					;;
+				deploy )
+					task_deploy
+					;;
+				uninstall )
+					task_uninstall
 					;;
 				* )
 					usage

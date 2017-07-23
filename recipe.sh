@@ -24,7 +24,8 @@ osname=`uname -o`
 taskcmd="cd $rfolder && ./recipe.sh task deploy"
 # do deploy without authentication prompt
 if [ $git_deploy_type = "ssh" ]; then
-	export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa"
+#	export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no"
+	:
 else
 	:
 fi
@@ -400,7 +401,7 @@ hexo_deploy()
 		return
 	fi
 
-	echo "begin hexo deploy"; hexo deploy &> /dev/null && echo "end hexo deploy"
+	echo "begin hexo deploy"; hexo deploy && echo "end hexo deploy"
 	if [ $? -ne 0 ]; then
 		echo "error: hexo deploy failed, perhaps network problems"
 	fi

@@ -12,6 +12,8 @@ ufolder='ufiles'
 urepo='https://github.com/yijing1998/hexo-ufiles.git|master'
 hfolder='hexofolder'
 tasktimer="30 * * * *"
+# ssh or https
+git_deploy_type="ssh"
 # user settings --- end --- #
 
 # calculate some usable variables
@@ -20,6 +22,12 @@ urepo_url=${urepo%|*}
 urepo_branch=${urepo#*|}
 osname=`uname -o`
 taskcmd="cd $rfolder && ./recipe.sh task deploy"
+# do deploy without authentication prompt
+if [ $git_deploy_type = "ssh" ]; then
+	export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no"
+else
+	:
+fi
 
 # enable native symbolic link for mingw in windows
 if [ $osname = "Msys" ]; then
@@ -391,6 +399,7 @@ hexo_deploy()
 		echo "error: hexo clean is not ok"
 		return
 	fi
+
 	echo "begin hexo deploy"; hexo deploy &> /dev/null && echo "end hexo deploy"
 	if [ $? -ne 0 ]; then
 		echo "error: hexo deploy failed, perhaps network problems"

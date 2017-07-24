@@ -40,8 +40,8 @@ if [ $git_deploy_type = "ssh" ]; then
 	# ssh-agent check
 	tmp=`ps -ef | grep "[s]sh-agent" | wc -l`
 	if [ $tmp -eq 0 ]; then
-		echo "Error: ssh-agent is not running! please run it first"
-		return
+		echo "Error: ssh-agent is not running! please run it first" 1>&2
+		exit 1
 	fi
 else
 	:

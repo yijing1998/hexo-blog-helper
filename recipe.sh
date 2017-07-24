@@ -28,7 +28,7 @@ osname=`uname -o`
 taskcmd="cd $rfolder && ./recipe.sh task deploy"
 
 # set task debug log path
-if [ $taskdf = "yes" ]; then
+if [ $taskdf = "on" ]; then
 	tasklog="$rfolder/logs"
 else
 	tasklog="/dev/null"

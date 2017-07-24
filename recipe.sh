@@ -28,7 +28,10 @@ if [ $git_deploy_type = "ssh" ]; then
 else
 	:
 fi
-alias git='LC_ALL=en_US.UTF-8 git'
+
+#alias git='LANGUAGE=en_US:en git'
+# ensure git produce English message
+export LANGUAGE="en_US:en"
 
 # enable native symbolic link for mingw in windows
 if [ $osname = "Msys" ]; then

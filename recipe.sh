@@ -11,7 +11,7 @@ tfolder='themes'
 ufolder='ufiles'
 urepo='https://github.com/yijing1998/hexo-ufiles.git|master'
 hfolder='hexofolder'
-tasktimer="24 * * * *"
+tasktimer="50 * * * *"
 # task debug flag: on / off
 taskdf="on"
 
@@ -37,6 +37,12 @@ fi
 # do deploy without authentication prompt
 if [ $git_deploy_type = "ssh" ]; then
 	export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no"
+	# ssh-agent check
+	tmp=`ps -ef | grep "[s]sh-agent" | wc -l`
+	if [ $tmp -eq 0 ]; then
+		echo "Error: ssh-agent is not running! please run it first"
+		return
+	fi
 else
 	:
 fi

@@ -11,9 +11,13 @@ tfolder='themes'
 ufolder='ufiles'
 urepo='https://github.com/yijing1998/hexo-ufiles.git|master'
 hfolder='hexofolder'
-tasktimer="30 * * * *"
+tasktimer="24 * * * *"
+# task debug flag: on / off
+taskdf="on"
+
 # ssh or https
 git_deploy_type="ssh"
+
 # user settings --- end --- #
 
 # calculate some usable variables
@@ -22,6 +26,14 @@ urepo_url=${urepo%|*}
 urepo_branch=${urepo#*|}
 osname=`uname -o`
 taskcmd="cd $rfolder && ./recipe.sh task deploy"
+
+# set task debug log path
+if [ $taskdf = "yes" ]; then
+	tasklog="$rfolder/logs"
+else
+	tasklog="/dev/null"
+fi
+
 # do deploy without authentication prompt
 if [ $git_deploy_type = "ssh" ]; then
 	export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no"
@@ -30,7 +42,7 @@ else
 fi
 
 #alias git='LANGUAGE=en_US:en git'
-# ensure git produce English message
+# ensure git produce English message (tested in ubuntu17)
 export LANGUAGE="en_US:en"
 
 # enable native symbolic link for mingw in windows
@@ -386,6 +398,13 @@ hexo_deploy()
 		return
 	fi
 
+	# check if /usr/local/bin is in $PATH
+	# in crontab task, /usr/local/bin is not in $PATH
+	tmp=`echo $PATH | grep "/usr/local/bin"`
+	if [ ! "$tmp" = "/usr/local/bin" ]; then
+		export PATH="$PATH:/usr/local/bin"
+	fi
+
 	tmp=`hexo_check`
 	case $tmp in
 		0 )
@@ -404,7 +423,7 @@ hexo_deploy()
 		return
 	fi
 
-	echo "begin hexo deploy"; hexo deploy && echo "end hexo deploy"
+	echo "begin hexo deploy"; hexo deploy > $tasklog 2>&1 && echo "end hexo deploy"
 	if [ $? -ne 0 ]; then
 		echo "error: hexo deploy failed, perhaps network problems"
 	fi

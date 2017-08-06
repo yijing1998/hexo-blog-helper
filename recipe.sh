@@ -329,7 +329,7 @@ new_post()
 {
 	# existance check
 	if [ ! -d $ufolder ]; then
-		echo No user repo files found! Try \'recipe git urepo\'.
+		echo "No user repo files found! Try \'recipe git urepo\'".
 		return
 	fi
 
@@ -359,9 +359,63 @@ new_post()
 		fi
 	fi
 
-	cd $hfolder
-	hexo new $pname
-	cd $rfolder
+#	cd $hfolder
+#	hexo new $pname
+#	cd $rfolder
+}
+
+# create a new draft in folder _drafts
+# yyyyMMdd/yyyy-MM-dd-###.md with hexo format: title date tags
+new_draft()
+{
+	# existance test
+	if [ ! -d "$ufolder" ]; then
+		echo "No user repo files found! Try \'recipe git urepo\'"
+		return
+	fi
+
+	drpath="$ufolder/_drafts"
+	popath="$ufolder/_posts"
+	ymname=`date "+%Y%m"`
+	if [ ! -d "$drpath/$ymname" ]; then
+		mkdir "$drpath/$ymname"
+	fi
+	if [ ! -d "$popath/$ymname" ]; then
+		mkdir "$popath/$ymname"
+	fi
+
+  fn=""
+	tmpstr=`ls $popath/$ymname $drpath/$ymname 2> /dev/null | grep .*\.md | sort -r | head -1`
+	if [ "$tmpstr" = "" ]; then
+		# first post of current month
+		fn=`date "+%Y-%m-%d.001.md"`
+	else
+		tmpstr=${tmpstr#*.}
+		tmpstr=${tmpstr%.*}
+		((tmpnum=10#$tmpstr))
+		if [ $tmpnum -eq 999 ]; then
+			echo "Error: Too many posts a month! 999 is the max." 1>&2
+			return
+		fi
+		tmpnum=$[tmpnum+1]
+		if [ $tmpnum -lt 10 ]; then
+			fn=`date "+%Y-%m-%d.00${tmpnum}.md"`
+		elif [ $tmpnum -lt 100 ]; then
+			fn=`date "+%Y-%m-%d.0${tmpnum}.md"`
+		else
+			fn=`date "+%Y-%m-%d.${tmpnum}.md"`
+		fi
+	fi
+
+	# create the post
+	cat > $drpath/$ymname/$fn <<E_O_F
+---
+title: title place for you!
+date: `date "+%Y-%m-%d %H:%M:%S"`
+tags:
+---
+E_O_F
+  echo "Info: New draft created! File Name: $fn"
 }
 
 # check hexo installation and initialization
@@ -465,6 +519,9 @@ elif [ $# -eq 2 ]; then
 				post )
 					# new post
 					new_post
+					;;
+				draft )
+					new_draft
 					;;
 				* )
 					usage

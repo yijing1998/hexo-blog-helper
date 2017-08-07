@@ -676,9 +676,7 @@ hexo_check()
 
 hexo_server()
 {
-	cd $hfolder
-	hexo server
-	cd $rfolder
+	cd $hfolder && hexo server --draft
 }
 
 hexo_deploy()

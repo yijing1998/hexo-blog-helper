@@ -326,7 +326,7 @@ init_all()
 
 # create a new post in folder _posts
 # yyyyMM/yyyy-MM-dd.###.md with hexo format: title date tags
-new_post()
+hexo_new_post()
 {
 	# existance check
 	if [ ! -d $ufolder ]; then
@@ -380,11 +380,11 @@ E_O_F
 
 # create a new draft in folder _drafts
 # yyyyMM/yyyy-MM-dd.###.md with hexo format: title date tags
-new_draft()
+hexo_new_draft()
 {
 	# existance test
 	if [ ! -d "$ufolder" ]; then
-		echo "No user repo files found! Try \'recipe git urepo\'"
+		echo "Error: No user repo files found! Try \'recipe git urepo\'" 1>&2
 		return
 	fi
 
@@ -430,6 +430,77 @@ tags:
 ---
 E_O_F
   echo "Info: New draft created! File Name: $fn"
+}
+
+# move post from folder _drafts to folder _posts
+hexo_draft2post()
+{
+	# existance test
+	if [ ! -d "$ufolder" ]; then
+		echo "Error: No user repo files found! Try \'recipe git urepo\'" 1>&2
+		return
+	fi
+
+  # waiting for user input
+  while [ 1 -eq 1 ]; do
+		# find last 5 posts in _drafts
+		drpath="$ufolder/_drafts"
+		popath="$ufolder/_posts"
+	  fdarr=()
+		for sf in `ls -lr $drpath | grep "^d.*[[:digit:]]\{6\}$" | awk '{print $9}' `; do
+	    for pf in `ls -r $drpath/$sf`; do
+				fdarr[${#fdarr[@]}]=$sf/$pf
+				if [ ${#fdarr[@]} -eq 5 ]; then
+					break
+				fi
+			done
+
+			if [ ${#fdarr[@]} -eq 5 ]; then
+				break
+			fi
+		done
+
+		if [ ${#fdarr[@]} -eq 0 ]; then
+			echo "Info: No posts in folder _drafts."
+			break
+		fi
+
+		#list top 5 posts in folder _drafts
+		((tmpnum=10#0))
+		for item in ${fdarr[*]}; do
+			tmpnum=$[tmpnum+1]
+			tt=`sed -n '0,/^title: /s/^title: //p' $drpath/$item`
+			dt=`sed -n '0,/^date: /s/^date: //p' $drpath/$item`
+			echo $tmpnum [$dt] $tt
+		done
+		read -p "Please enter your choice (type 'x' to exit): " cmd
+		if [ $cmd = "x" ]; then
+			break
+		fi
+		((tmpnum=10#$cmd)) 2> /dev/null
+		if [ $? -ne 0 ]; then
+			echo "Error: Please input number 1~5 or 'x'" 1>&2
+			continue
+		fi
+
+		if [ $tmpnum -lt 1 -o $tmpnum -gt 5 ]; then
+			echo "Error: Please input number 1~5 or 'x'" 1>&2
+			continue
+		fi
+		tmpstr=${fdarr[(($tmpnum-1))]}
+		ymname=${tmpstr%/*}
+
+		if [ ! -d "$popath/$ymname" ]; then
+			mkdir "$popath/$ymname"
+		fi
+
+		mv $drpath/$tmpstr $popath/$tmpstr 2> /dev/null
+		if [ $? -ne 0 ]; then
+			echo "Error: Failed to move file, please check user permission." 1>&2
+		else
+			echo "Info: A post moved from _drafts to _posts."
+		fi
+	done
 }
 
 # check hexo installation and initialization
@@ -522,6 +593,9 @@ if [ $# -eq 1 ]; then
 		deploy )
 			hexo_deploy
 			;;
+		d2p )
+		  hexo_draft2post
+		  ;;
 		* )
 			usage
 			;;
@@ -532,10 +606,10 @@ elif [ $# -eq 2 ]; then
 			case $2 in
 				post )
 					# new post
-					new_post
+					hexo_new_post
 					;;
 				draft )
-					new_draft
+					hexo_new_draft
 					;;
 				* )
 					usage

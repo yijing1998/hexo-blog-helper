@@ -324,7 +324,8 @@ init_all()
 	link_things
 }
 
-# create a new post according to the last post's name
+# create a new post in folder _posts
+# yyyyMM/yyyy-MM-dd.###.md with hexo format: title date tags
 new_post()
 {
 	# existance check
@@ -333,39 +334,52 @@ new_post()
 		return
 	fi
 
+	drpath="$ufolder/_drafts"
 	popath="$ufolder/_posts"
-	daystr=`date "+%Y-%m-%d"`
+	ymname=`date "+%Y%m"`
+	if [ ! -d "$drpath/$ymname" ]; then
+		mkdir "$drpath/$ymname"
+	fi
+	if [ ! -d "$popath/$ymname" ]; then
+		mkdir "$popath/$ymname"
+	fi
 
-	tmpcnt=`find $popath -maxdepth 1 -name "$daystr*" | wc -w`
-
-	pname=''
-	if [ $tmpcnt -eq 0 ]; then
-		pname="o01"
+  fn=""
+	tmpstr=`ls $popath/$ymname $drpath/$ymname 2> /dev/null | grep .*\.md | sort -r | head -1`
+	if [ "$tmpstr" = "" ]; then
+		# first post of current month
+		fn=`date "+%Y-%m-%d.001.md"`
 	else
-		# find the max number and calculate the new post file name
-		tmpstr=`find $popath -maxdepth 1 -name "$daystr*" | sort -r | head -1 | grep -o "o[[:digit:]]\{2\}"`
-		mnum=${tmpstr#*o0}
-		if [ "$mnum" = "$tmpstr" ]; then
-			mnum=${tmpstr#*o}
-		fi
-		mnum=$[mnum+1]
-		if [ $mnum -lt 10 ]; then
-			pname="o0"${mnum}
-		elif [ $mnum -lt 100 ]; then
-			pname="o"${mnum}
-		else
-			echo "Too many posts a day! 99 is the max."
+		tmpstr=${tmpstr#*.}
+		tmpstr=${tmpstr%.*}
+		((tmpnum=10#$tmpstr))
+		if [ $tmpnum -eq 999 ]; then
+			echo "Error: Too many posts a month! 999 is the max." 1>&2
 			return
+		fi
+		tmpnum=$[tmpnum+1]
+		if [ $tmpnum -lt 10 ]; then
+			fn=`date "+%Y-%m-%d.00${tmpnum}.md"`
+		elif [ $tmpnum -lt 100 ]; then
+			fn=`date "+%Y-%m-%d.0${tmpnum}.md"`
+		else
+			fn=`date "+%Y-%m-%d.${tmpnum}.md"`
 		fi
 	fi
 
-#	cd $hfolder
-#	hexo new $pname
-#	cd $rfolder
+	# create the post
+	cat > $popath/$ymname/$fn <<E_O_F
+---
+title: title place for you!
+date: `date "+%Y-%m-%d %H:%M:%S"`
+tags:
+---
+E_O_F
+  echo "Info: New post created! File Name: $fn"
 }
 
 # create a new draft in folder _drafts
-# yyyyMMdd/yyyy-MM-dd-###.md with hexo format: title date tags
+# yyyyMM/yyyy-MM-dd.###.md with hexo format: title date tags
 new_draft()
 {
 	# existance test

@@ -503,6 +503,77 @@ hexo_draft2post()
 	done
 }
 
+# move post from folder _posts to folder _drafts
+hexo_post2draft()
+{
+	# existance test
+	if [ ! -d "$ufolder" ]; then
+		echo "Error: No user repo files found! Try \'recipe git urepo\'" 1>&2
+		return
+	fi
+
+  # waiting for user input
+  while [ 1 -eq 1 ]; do
+		# find last 5 posts in _posts
+		drpath="$ufolder/_drafts"
+		popath="$ufolder/_posts"
+	  fdarr=()
+		for sf in `ls -lr $popath | grep "^d.*[[:digit:]]\{6\}$" | awk '{print $9}' `; do
+	    for pf in `ls -r $popath/$sf`; do
+				fdarr[${#fdarr[@]}]=$sf/$pf
+				if [ ${#fdarr[@]} -eq 5 ]; then
+					break
+				fi
+			done
+
+			if [ ${#fdarr[@]} -eq 5 ]; then
+				break
+			fi
+		done
+
+		if [ ${#fdarr[@]} -eq 0 ]; then
+			echo "Info: No posts in folder _posts."
+			break
+		fi
+
+		#list top 5 posts in folder _drafts
+		((tmpnum=10#0))
+		for item in ${fdarr[*]}; do
+			tmpnum=$[tmpnum+1]
+			tt=`sed -n '0,/^title: /s/^title: //p' $popath/$item`
+			dt=`sed -n '0,/^date: /s/^date: //p' $popath/$item`
+			echo $tmpnum [$dt] $tt
+		done
+		read -p "Please enter your choice (type 'x' to exit): " cmd
+		if [ $cmd = "x" ]; then
+			break
+		fi
+		((tmpnum=10#$cmd)) 2> /dev/null
+		if [ $? -ne 0 ]; then
+			echo "Error: Please input number 1~5 or 'x'" 1>&2
+			continue
+		fi
+
+		if [ $tmpnum -lt 1 -o $tmpnum -gt 5 ]; then
+			echo "Error: Please input number 1~5 or 'x'" 1>&2
+			continue
+		fi
+		tmpstr=${fdarr[(($tmpnum-1))]}
+		ymname=${tmpstr%/*}
+
+		if [ ! -d "$drpath/$ymname" ]; then
+			mkdir "$drpath/$ymname"
+		fi
+
+		mv $popath/$tmpstr $drpath/$tmpstr 2> /dev/null
+		if [ $? -ne 0 ]; then
+			echo "Error: Failed to move file, please check user permission." 1>&2
+		else
+			echo "Info: A post moved from _posts to _drafts."
+		fi
+	done
+}
+
 # check hexo installation and initialization
 # do check under current folder: pwd
 # return
@@ -596,6 +667,9 @@ if [ $# -eq 1 ]; then
 		d2p )
 		  hexo_draft2post
 		  ;;
+		p2d )
+		  hexo_post2draft
+			;;
 		* )
 			usage
 			;;

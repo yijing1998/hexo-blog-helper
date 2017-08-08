@@ -18,6 +18,9 @@ taskdf="on"
 # ssh or https
 git_deploy_type="ssh"
 
+# ssh pub key location
+sshkey=$HOME/.ssh/id_rsa
+
 # user settings --- end --- #
 
 # calculate some usable variables
@@ -34,20 +37,30 @@ else
 	tasklog="/dev/null"
 fi
 
+# prepare authentication info
 # do deploy without authentication prompt
 if [ $git_deploy_type = "ssh" ]; then
 	export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no"
-	# ssh-agent check
+	# ssh-agent check and run
 	tmp=`ps -ef | grep "[s]sh-agent" | wc -l`
 	if [ $tmp -eq 0 ]; then
-		echo "Error: ssh-agent is not running! please run it first" 1>&2
-		exit 1
+		eval "$(ssh-agent -s)" > /dev/null 2>&1
+		if [ $? -eq 0 ]; then
+			ssh-add $sshkey
+			if [ $? -ne 0 ]; then
+				echo "Error: Failed to add ssh-key to ssh-agent." 1>&2
+				exit 1
+			fi
+		else
+			echo "Error: Failed to run ssh-agent." 1>&2
+			exit 1
+		fi
 	fi
 else
 	:
 fi
 
-#alias git='LANGUAGE=en_US:en git'
+# alias git='LANGUAGE=en_US:en git'
 # ensure git produce English message (tested in ubuntu17)
 export LANGUAGE="en_US:en"
 
@@ -745,6 +758,9 @@ if [ $# -eq 1 ]; then
 			;;
 		rmd )
 		  hexo_remove_draft
+			;;
+		nd )
+		  hexo_new_draft
 			;;
 		* )
 			usage

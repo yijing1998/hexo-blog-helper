@@ -46,7 +46,7 @@ if [ $git_deploy_type = "ssh" ]; then
 	if [ $tmp -eq 0 ]; then
 		eval "$(ssh-agent -s)" > /dev/null 2>&1
 		if [ $? -eq 0 ]; then
-			ssh-add $sshkey
+			ssh-add $sshkey > /dev/null 2>&1
 			if [ $? -ne 0 ]; then
 				echo "Error: Failed to add ssh-key to ssh-agent." 1>&2
 				exit 1
@@ -72,8 +72,8 @@ fi
 # check and change to approot if needed
 chch_approot()
 {
-	if [ ! $rfolder = "`pwd`" ]; then
-		cd $rfolder $1 > /dev/null
+	if [ ! "$rfolder" = "`pwd`" ]; then
+		cd $rfolder > /dev/null
 	fi
 }
 

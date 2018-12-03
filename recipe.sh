@@ -1,14 +1,24 @@
 #!/bin/bash
 set -e
 
+MYEOF=E_O_F
+
+# Add '/' at the end of path string
+pathfix()
+{
+    if [ ! "/" = "${1:0-1}" ]; then
+        echo "${1}/"
+    else
+        echo "$1"
+    fi
+}
+
 ##################
 # Get Env values #
 ##################
 # path of where i am
 BASEPATH=$(cd `dirname $0`; pwd)
-if [ ! "/" = "${BASEPATH:0-1}" ]; then
-    BASEPATH="${BASEPATH}/"
-fi
+BASEPATH=`pathfix $BASEPATH`
 
 # cfg file path
 CFGFILE="${BASEPATH}recipe.conf"
@@ -20,65 +30,42 @@ if [ ! -f $CFGFILE ]; then
     exit -1
 fi
 
-CFGARRAY=(
-    "CFGHEXOBLOGPATH"
-    "CFGHEXOMYSOURCE"
-)
-cat $CFGFILE | sed s/[[:space:]]//g | while read MYLINE; do
+# read all cfgs from cfg file
+while read MYLINE; do
     if [ "#" = "${MYLINE:0:1}" ]; then
         continue
     fi
     if [ 0 -eq ${#MYLINE} ]; then
         continue
     fi
-    echo ${MYLINE%:*}
-    case ${MYLINE%:*} in
-        CFGHEXOBLOGPATH)
-            CFGHEXOBLOGPATH=${MYLINE#*:}
-            ;;
-        CFGHEXOMYSOURCE)
-            CFGHEXOMYSOURCE=${MYLINE#*:}
-            ;;
-        *)
-            echo "no"
-            ;;
-    esac
+    eval ${MYLINE%%:*}=${MYLINE#*:}
+done << $MYEOF
+    `cat $CFGFILE | sed s/[[:space:]]//g`
+$MYEOF
+
+while [ 0 ] ; do
+    echo "THis is a hexo blog helper. Select what you want:"
+    select MYSEL in \
+        "Init hexo" \
+        "Synchronize my blog file" \
+        "Link hexo with my blog file" \
+        "Start/Restart hexo server" \
+        "Stop hexo server" \
+        "New draft" \
+        "Move to post" \
+        "Move to draft" \
+        "Exit" \
+        "Init my blog file (DANGER!!!)" \
+    ; do
+        case $REPLY in
+            9) : ;;
+        esac
+        break
+    done
+    if [ $REPLY -eq 9 ]; then
+        break
+    fi
 done
 
-usage()
-{
-    echo "A hexo blog helper!"
-}
-
-# enviroment check
-mycheck()
-{
-    echo "check"
-}
-
-# enviroment check and setup
-myinit()
-{
-    echo "init"
-}
-
-# Parse options
-if [ $# -eq 0 ]; then
-    usage
-else
-    while getopts "i" MYARG; do
-        case $MYARG in
-            i)
-                myinit
-                ;;
-            ?)
-                usage
-                ;;
-        esac
-    done
-fi
-
-
-echo "val":${CFGHEXOBLOGPATH}
-
+#echo $BASEPATH
 

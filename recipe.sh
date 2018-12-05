@@ -7,7 +7,7 @@ pathfix()
     if [ ! "/" = "${1:0-1}" ]; then
         echo "${1}/"
     else
-        echo "$1"
+        echo "${1}"
     fi
 }
 
@@ -25,7 +25,7 @@ CFGFILE="${BASEPATH}recipe.conf"
 if [ ! -f $CFGFILE ]; then
     echo "Config file dose NOT exist!" 1>&2
     echo "Please create it with the name: recipe.conf" 1>&2
-    exit -1
+    exit 1
 fi
 
 # read all cfgs from cfg file
@@ -37,21 +37,21 @@ while read MYLINE; do
         continue
     fi
     eval ${MYLINE%%:*}=${MYLINE#*:}
-done << $MYEOF
-    `cat $CFGFILE | sed s/[[:space:]]//g`
+done <<$MYEOF
+`cat $CFGFILE | sed s/[[:space:]]//g`
 $MYEOF
 
+# create a new draft
 do_new_draft()
 {
-    if [ 0 -eq ${#CFGHEXOMYSOURCE} ]; then
-        echo "Error: CFGHEXOBLOGPATH is NOT set, please set it up in recipe.conf." >&2
-        return
-    fi
-    cd $BASEPATH > /dev/null
     if [ ! -d "$CFGHEXOMYSOURCE" ]; then
-        echo "Error: Please creat your blog folder in up menu => 'Mysource management'." >&2
+        echo "Error: Please creat your blog folder in up menu => 'Mysource manage'." >&2
         return
     fi
+
+    # change dir to basepath
+    cd $BASEPATH > /dev/null
+
     local mypath=`pathfix $(cd $CFGHEXOMYSOURCE; pwd)`
     local drpath="${mypath}_drafts/"
 	local popath="${mypath}_posts/"
@@ -87,7 +87,7 @@ do_new_draft()
     fi
 
     # create the post
-	cat > ${drpath}${ymname}/${fn} << $MYEOF
+	cat > ${drpath}${ymname}/${fn} <<$MYEOF
 ---
 title: title place for you!
 date: `date "+%Y-%m-%d %H:%M:%S"`
@@ -95,24 +95,55 @@ tags:
 ---
 $MYEOF
   echo "Info: New draft created! File Name: $fn"
+  echo "press 'Enter' to continue ..."
+  read
 }
 
-# Menu 4
+# move a draft to post
+do_draft2post()
+{
+    if [ ! -d "$CFGHEXOMYSOURCE" ]; then
+        echo "Error: Please creat your blog folder in up menu => 'Mysource manage'." >&2
+        return
+    fi
+    
+    # change dir to basepath
+    cd $BASEPATH > /dev/null
+
+    local mypath=`pathfix $(cd $CFGHEXOMYSOURCE; pwd)`
+    local drpath="${mypath}_drafts/"
+	local popath="${mypath}_posts/"
+    local farr=
+    local farrvalid=0
+    local cpage=1
+    local pgsize=10
+    while [ 0 ]; do
+        # get fname array
+        if [ 0 -eq $farrvalid ]; then
+            farr=(`ls -Rrl $drpath | grep ^- | awk '{print $9}'`)
+            farrvalid=1
+        fi
+        echo $farr ${#farr[*]}
+        break
+    done
+}
+
+# Menu 3
 menu_myblog()
 {
     while [ 0 ] ; do
         echo "You can manage your draft or post here."
         select MYSEL in \
             "New draft" \
-            "Move article to post" \
-            "Move article to draft" \
+            "Move draft to post" \
+            "Move post to draft" \
             "Delete draft" \
             "Clear empty folders" \
             "Back" \
         ; do
             case $REPLY in
                 1) do_new_draft ;;
-                2) : ;;
+                2) do_draft2post ;;
                 3) : ;;
                 4) : ;;
                 5) : ;;
@@ -127,29 +158,27 @@ menu_myblog()
 }
 
 # test
-do_new_draft
+do_draft2post
 
 # Main menu
-: << $MYEOF
+: <<$MYEOF
 while [ 0 ] ; do
     echo "THis is a hexo blog helper. Select what you want:"
     select MYSEL in \
-        "Hexo environment" \
-        "Mysouce management" \
-        "Server action" \
-        "Myblog management" \
+        "Mysouce manage" \
+        "Server control" \
+        "Blog edit" \
         "Exit" \
     ; do
         case $REPLY in
             1) : ;;
             2) : ;;
-            3) : ;;
-            4) menu_myblog ;;
-            5) : ;;
+            3) menu_myblog ;;
+            4) : ;;
         esac
         break
     done
-    if [ $REPLY -eq 5 ]; then
+    if [ $REPLY -eq 4 ]; then
         break
     fi
 done

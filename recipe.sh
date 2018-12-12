@@ -95,7 +95,8 @@ tags:
 ---
 $MYEOF
   echo "Info: New draft created! File Name: $fn"
-  read -p "press 'Enter' to continue ..."
+  read -p "press 'Enter' TWICE to continue ..."
+  # while read ... do : "read" asynchronous with "echo"
 }
 
 # check if $1 is number
@@ -105,41 +106,50 @@ numrangeok()
 {
     # param check
     if [ ! $# -eq 3 ]; then
-        echo 1
-        return
+        return 1
     fi
     
     # number check
     local tmpstr=`echo $1$2$3 | grep '^[[:digit:]]*$'`
     if [ -z $tmpstr ]; then
-        echo 1
-        return
+        #echo "not a number" 1>&2
+        return 1
     fi
 
     # range check
     if [ $1 -lt $2 ]; then
         # too small
-        echo 1
-        return
+        #echo "too small" 1>&2
+        return 1
     fi
     if [ $1 -gt $3 ]; then
         # too big
-        echo 1
-        return
+        #echo "too big" 1>&2
+        return 1
     fi
 
-    echo 0
+    return 0
 }
 
 # move filename $1 between $2 and $3
 # do not check params: the caller has checked them
 moveaction()
 {
-    echo `pwd` 1>&2
     local mypath=`pathfix $(cd $CFGHEXOMYSOURCE; pwd)`
-    echo $mypath 1>&2
+    local drpath="${mypath}_drafts/"
+	local popath="${mypath}_posts/"
+    local ymname="${1:0:4}${1:5:2}"
+    
+    if [ ! -d "${drpath}${ymname}" ]; then
+		mkdir -p "${drpath}${ymname}"
+	fi
+	if [ ! -d "${popath}${ymname}" ]; then
+		mkdir -p "${popath}${ymname}"
+	fi
+    
+    mv -f "$2$ymname/$1" "$3$ymname/$1" 2>/dev/null
 
-    echo 0
+    return $?
 }
 
 # move a blog file between _draft and _post according to $1
@@ -180,7 +190,7 @@ do_movefile()
         nowmsg="Move file from _post to _draft. Files are listed here.\nChoose the file NUMBER Or pageup=>j pagedown=>k back=>x"
     fi
 
-    while [ 0 ]; do
+    while [ : ]; do
         clear
         echo -e $nowmsg 
         # get fname array
@@ -237,11 +247,14 @@ do_movefile()
                     continue
                 fi
 
-                if [ 1 -eq `numrangeok $MYCMD $cmin $cmax` ]; then
+                numrangeok $MYCMD $cmin $cmax
+                if [ 0 -ne $? ]; then
                     # not pass the check
                     continue
                 fi
-                if [ 1 -eq `moveaction ${farr[$MYCMD]} $nowfrom $nowto` ]; then
+
+                moveaction ${farr[$MYCMD]} $nowfrom $nowto
+                if [ 0 -ne $? ]; then
                     # move failed
                     echo "Move failed. Please check user permissions."
                     read -p "press 'Enter' to continue ..."
@@ -250,7 +263,7 @@ do_movefile()
                 
                 echo "Move succeeded."
                 read -p "press 'Enter' to continue ..."
-                ((farrvalid=1))
+                ((farrvalid=0))
                 ;;
         esac
     done
@@ -259,30 +272,24 @@ do_movefile()
 # Menu 3
 menu_myblog()
 {
-    while [ 0 ] ; do
+    clear
+    echo "You can manage your draft or post here."
+    echo "1) New draft  2) Move draft to post  3) Move post to draft"
+    echo "4) Delete draft  5) Clear empty folders  6) Back"
+    while read MYLINE ; do
         clear
         echo "You can manage your draft or post here."
-        select MYSEL in \
-            "New draft" \
-            "Move draft to post" \
-            "Move post to draft" \
-            "Delete draft" \
-            "Clear empty folders" \
-            "Back" \
-        ; do
-            case $REPLY in
-                1) do_new_draft ;;
-                2) do_movefile 0 ;;
-                3) do_movefile 1 ;;
-                4) : ;;
-                5) : ;;
-                6) : ;;
-            esac
-            break
-        done
-        if [ $REPLY -eq 6 ]; then
-            break
-        fi
+        echo "1) New draft  2) Move draft to post  3) Move post to draft"
+        echo "4) Delete draft  5) Clear empty folders  6) Back"
+        case $MYLINE in
+            1) do_new_draft ;;
+            2) do_movefile 0 ;;
+            3) do_movefile 1 ;;
+            4) : ;;
+            5) : ;;
+            6) break ;;
+            *) : ;;
+        esac
     done
 }
 
@@ -291,7 +298,7 @@ menu_myblog
 
 # Main menu
 : <<$MYEOF
-while [ 0 ] ; do
+while [ : ] ; do
     echo "THis is a hexo blog helper. Select what you want:"
     select MYSEL in \
         "Mysouce manage" \

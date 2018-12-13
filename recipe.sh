@@ -95,8 +95,7 @@ tags:
 ---
 $MYEOF
   echo "Info: New draft created! File Name: $fn"
-  read -p "press 'Enter' TWICE to continue ..."
-  # while read ... do : "read" asynchronous with "echo"
+  read -p "press 'Enter' to continue ..."
 }
 
 # check if $1 is number
@@ -152,9 +151,30 @@ moveaction()
     return $?
 }
 
-# move a blog file between _draft and _post according to $1
+# delete filename $1 from _drafts/_posts $2
+delaction()
+{
+    local mypath=`pathfix $(cd $CFGHEXOMYSOURCE; pwd)`
+    local ymname="${1:0:4}${1:5:2}"
+
+    rm -f "$2$ymname/$1" 2>/dev/null
+
+    return $?
+}
+
+# get *.md file $1's title from folder _drafts/_posts $2
+getmdtitle()
+{
+    local mypath=`pathfix $(cd $CFGHEXOMYSOURCE; pwd)`
+    local ymname="${1:0:4}${1:5:2}"
+    local MYLINE=`head -n 3 $2$ymname/$1 | grep ^title:`
+    echo ${MYLINE:6}
+}
+
+# 0 1 move a blog file between _draft and _post according to $1
 # 0: draft2post    1: post2draft
-do_movefile()
+# 2 delete a blog file from _draft
+do_cookfile()
 {
     if [ ! -d "$CFGHEXOMYSOURCE" ]; then
         echo "Error: Please creat your blog folder in up menu => 'Mysource manage'." >&2
@@ -183,11 +203,17 @@ do_movefile()
     if [ $1 -eq 0 ]; then
         nowfrom=$drpath
         nowto=$popath
-        nowmsg="Move file from _draft to _post. Files are listed here.\nChoose the file NUMBER Or pageup=>j pagedown=>k back=>x"
-    else
+        nowmsg="Move file from _drafts to _posts. Files are listed here.\nChoose the file NUMBER Or pageup=>j pagedown=>k back=>x"
+    elif [ $1 -eq 1 ]; then
         nowfrom=$popath
         nowto=$drpath
-        nowmsg="Move file from _post to _draft. Files are listed here.\nChoose the file NUMBER Or pageup=>j pagedown=>k back=>x"
+        nowmsg="Move file from _posts to _drafts. Files are listed here.\nChoose the file NUMBER Or pageup=>j pagedown=>k back=>x"
+    elif [ $1 -eq 2 ]; then
+        nowfrom=$drpath
+        nowmsg="Delete file from _drafts. Files are listed here.\nChoose the file NUMBER Or pageup=>j pagedown=>k back=>x"
+    else
+        nowfrom=$popath
+        nowmsg="Delete file from _posts. Files are listed here.\nChoose the file NUMBER Or pageup=>j pagedown=>k back=>x"
     fi
 
     while [ : ]; do
@@ -217,7 +243,7 @@ do_movefile()
             if [ $cid -ge $farrsize ]; then
                 break
             fi
-            echo $cid ${farr[$cid]}
+            echo $cid ${farr[$cid]} `getmdtitle ${farr[$cid]} $nowfrom`
         done
 
         ((cmin=$cpage*$CFGPAGESIZE))
@@ -227,7 +253,7 @@ do_movefile()
             cmax=$tmpcnt
         fi
 
-        read -p "Your choice: " MYCMD
+        read -p "[Page $((cpage+1))/$pgcnt]. Your choice: " MYCMD
         case $MYCMD in
             x) break ;;
             j) # prev page
@@ -253,15 +279,22 @@ do_movefile()
                     continue
                 fi
 
-                moveaction ${farr[$MYCMD]} $nowfrom $nowto
+                if [ 2 -eq $1 ]; then
+                    # delete action
+                    delaction ${farr[$MYCMD]} $nowfrom
+                else
+                    # move action
+                    moveaction ${farr[$MYCMD]} $nowfrom $nowto
+                fi
+
                 if [ 0 -ne $? ]; then
                     # move failed
-                    echo "Move failed. Please check user permissions."
+                    echo "Operation failed. Please check user permissions."
                     read -p "press 'Enter' to continue ..."
                     continue
                 fi
                 
-                echo "Move succeeded."
+                echo "Operation succeeded."
                 read -p "press 'Enter' to continue ..."
                 ((farrvalid=0))
                 ;;
@@ -272,23 +305,19 @@ do_movefile()
 # Menu 3
 menu_myblog()
 {
-    clear
-    echo "You can manage your draft or post here."
-    echo "1) New draft  2) Move draft to post  3) Move post to draft"
-    echo "4) Delete draft  5) Clear empty folders  6) Back"
-    while read MYLINE ; do
+    while [ : ] ; do
         clear
         echo "You can manage your draft or post here."
         echo "1) New draft  2) Move draft to post  3) Move post to draft"
         echo "4) Delete draft  5) Clear empty folders  6) Back"
+        read -p "Your choice: " MYLINE
         case $MYLINE in
             1) do_new_draft ;;
-            2) do_movefile 0 ;;
-            3) do_movefile 1 ;;
-            4) : ;;
+            2) do_cookfile 0 ;;
+            3) do_cookfile 1 ;;
+            4) do_cookfile 2 ;;
             5) : ;;
             6) break ;;
-            *) : ;;
         esac
     done
 }

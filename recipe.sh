@@ -44,11 +44,6 @@ $MYEOF
 # create a new draft
 do_new_draft()
 {
-    if [ ! -d "$CFGHEXOMYSOURCE" ]; then
-        echo "Error: Please creat your blog folder in up menu => 'Mysource manage'." >&2
-        return
-    fi
-
     # change dir to basepath
     cd $BASEPATH > /dev/null
 
@@ -176,11 +171,6 @@ getmdtitle()
 # 2 delete a blog file from _draft
 do_cookfile()
 {
-    if [ ! -d "$CFGHEXOMYSOURCE" ]; then
-        echo "Error: Please creat your blog folder in up menu => 'Mysource manage'." >&2
-        return
-    fi
-    
     # change dir to basepath
     cd $BASEPATH > /dev/null
 
@@ -305,11 +295,6 @@ do_cookfile()
 # clear empty folders from _posts and _drafts
 do_clearempty()
 {
-    if [ ! -d "$CFGHEXOMYSOURCE" ]; then
-        echo "Error: Please creat your blog folder in up menu => 'Mysource manage'." >&2
-        return
-    fi
-    
     # change dir to basepath
     cd $BASEPATH > /dev/null
 
@@ -342,6 +327,12 @@ do_clearempty()
 # Menu 3
 menu_myblog()
 {
+    if [ ! -d "$CFGHEXOMYSOURCE" ]; then
+        echo "Error: Please creat your blog folder in up menu => 'Mysource manage'." >&2
+        read -p "press 'Enter' to continue ..."
+        return
+    fi
+
     while [ : ] ; do
         clear
         echo "You can manage your draft or post here."
@@ -359,8 +350,28 @@ menu_myblog()
     done
 }
 
+# Menu 1
+menu_mysource()
+{
+    while [ : ]; do
+        clear
+        echo "You can manage your blog folders here."
+        echo "1) Init blog folders from Hexo"
+        echo "2) Init blog folders from Git"
+        echo "3) Simple Git Syncronize"
+        echo "4) Back"
+        read -p "Your choice: " MYLINE
+        case $MYLINE in
+            1) : ;;
+            2) : ;;
+            3) : ;;
+            4) break ;;
+        esac
+    done
+}
+
 # test
-menu_myblog
+menu_mysource
 
 # Main menu
 : <<$MYEOF
@@ -373,7 +384,7 @@ while [ : ] ; do
         "Exit" \
     ; do
         case $REPLY in
-            1) : ;;
+            1) menu_mysource ;;
             2) : ;;
             3) menu_myblog ;;
             4) : ;;

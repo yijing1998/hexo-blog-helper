@@ -221,7 +221,7 @@ do_cookfile()
         echo -e $nowmsg 
         # get fname array
         if [ 0 -eq $farrvalid ]; then
-            farr=(`ls -Rrl $nowfrom | grep ^- | awk '{print $9}'`)
+            farr=(`ls -Rrl $nowfrom | grep ^- | awk '{print $NF}'`)
             ((farrsize=${#farr[*]}))
             if [ 0 -eq $farrsize ]; then
                 echo "Info: No posts in folder _${nowfrom##*_}."
@@ -302,6 +302,43 @@ do_cookfile()
     done
 }
 
+# clear empty folders from _posts and _drafts
+do_clearempty()
+{
+    if [ ! -d "$CFGHEXOMYSOURCE" ]; then
+        echo "Error: Please creat your blog folder in up menu => 'Mysource manage'." >&2
+        return
+    fi
+    
+    # change dir to basepath
+    cd $BASEPATH > /dev/null
+
+    local mypath=`pathfix $(cd $CFGHEXOMYSOURCE; pwd)`
+    local drpath="${mypath}_drafts/"
+	local popath="${mypath}_posts/"
+
+    local farr=(`ls -l $drpath | grep ^d | awk '{print $NF}'`)
+    local tmptest
+    for tmpfolder in ${farr[@]}; do
+        tmptest=`ls -A $drpath$tmpfolder`
+        if [ 0 -eq ${#tmptest} ]; then
+            echo "_drafts/$tmpfolder deleted!"
+            rm -rf $drpath$tmpfolder 2>/dev/null
+        fi
+    done
+
+    farr=(`ls -l $popath | grep ^d | awk '{print $NF}'`)
+    for tmpfolder in ${farr[@]}; do
+        tmptest=`ls -A $popath$tmpfolder`
+        if [ 0 -eq ${#tmptest} ]; then
+            echo "_posts/$tmpfolder deleted!"
+            rm -rf $popath$tmpfolder 2>/dev/null
+        fi
+    done
+    echo "Clear done!"
+    read -p "press 'Enter' to continue ..."
+}
+
 # Menu 3
 menu_myblog()
 {
@@ -316,7 +353,7 @@ menu_myblog()
             2) do_cookfile 0 ;;
             3) do_cookfile 1 ;;
             4) do_cookfile 2 ;;
-            5) : ;;
+            5) do_clearempty ;;
             6) break ;;
         esac
     done

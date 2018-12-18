@@ -41,6 +41,25 @@ done <<$MYEOF
 `cat $CFGFILE | sed s/[[:space:]]//g`
 $MYEOF
 
+# check basic configs
+if [ 0 -eq ${#CFGHEXOBLOGPATH} ]; then
+    echo "config: CFGHEXOBLOGPATH is missing!" 1>&2
+    echo "Please set it up in: recipe.conf!" 1>&2
+    exit 1
+fi
+
+if [ 0 -eq ${#CFGHEXOMYSOURCE} ]; then
+    echo "config: CFGHEXOMYSOURCE is missing!" 1>&2
+    echo "Please set it up in: recipe.conf!" 1>&2
+    exit 1
+fi
+
+if [ 0 -eq ${#CFGPAGESIZE} ]; then
+    echo "config: CFGPAGESIZE is missing!" 1>&2
+    echo "Please set it up in: recipe.conf!" 1>&2
+    exit 1
+fi
+
 # create a new draft
 do_new_draft()
 {
@@ -327,6 +346,9 @@ do_clearempty()
 # Menu 3
 menu_myblog()
 {
+    # change dir to basepath
+    cd $BASEPATH > /dev/null
+
     if [ ! -d "$CFGHEXOMYSOURCE" ]; then
         echo "Error: Please creat your blog folder in up menu => 'Mysource manage'." >&2
         read -p "press 'Enter' to continue ..."
@@ -350,6 +372,40 @@ menu_myblog()
     done
 }
 
+# check if hexo is installed
+hexook()
+{
+    hexo version 2>&1 1>/dev/null
+    if [ 0 -ne $? ]; then
+        return 1
+    fi
+
+    return 0
+}
+
+# init blog folders from Hexo
+do_initblog_hexo()
+{
+    # change dir to basepath
+    cd $BASEPATH > /dev/null
+
+    if [ ! -d "$CFGHEXOBLOGPATH" ]; then
+        echo "Your hexo folder doesn't exist. Create it in up menu => 'Hexo manage'." >&2
+        read -p "press 'Enter' to continue ..."
+        return
+    fi
+
+    if [ -d "$CFGHEXOMYSOURCE" ]; then
+        echo "Warning: Your blog folder Exists! Action will clear All files in it!"
+        read -p "Continue the action: (no)" MYLINE
+        if [ ! "${MYLINE,,}" = "y" ] && [ ! "${MYLINE,,}" = "yes" ]; then
+            return
+        fi
+    fi
+
+    read -p "press 'Enter' to continue ..."
+}
+
 # Menu 1
 menu_mysource()
 {
@@ -362,7 +418,7 @@ menu_mysource()
         echo "4) Back"
         read -p "Your choice: " MYLINE
         case $MYLINE in
-            1) : ;;
+            1) do_initblog_hexo ;;
             2) : ;;
             3) : ;;
             4) break ;;
@@ -379,7 +435,7 @@ while [ : ] ; do
     echo "THis is a hexo blog helper. Select what you want:"
     select MYSEL in \
         "Mysouce manage" \
-        "Server control" \
+        "Hexo manage" \
         "Blog edit" \
         "Exit" \
     ; do

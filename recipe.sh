@@ -53,6 +53,11 @@ if [ 0 -eq ${#CFGHEXOMYSOURCE} ]; then
     echo "Please set it up in: recipe.conf!" 1>&2
     exit 1
 fi
+if [ "${CFGHEXOMYSOURCE}" = "/" ]; then
+    echo "config: CFGHEXOMYSOURCE can NOT be '/'!" 1>&2
+    echo "Please correct it in: recipe.conf!" 1>&2
+    exit 1
+fi
 
 if [ 0 -eq ${#CFGPAGESIZE} ]; then
     echo "config: CFGPAGESIZE is missing!" 1>&2
@@ -108,7 +113,11 @@ date: `date "+%Y-%m-%d %H:%M:%S"`
 tags:
 ---
 $MYEOF
-  echo "Info: New draft created! File Name: $fn"
+    if [ 0 -ne $? ]; then
+        echo "Operation failed. Please check user permissions."
+    else
+        echo "Info: New draft created! File Name: $fn"
+    fi
   read -p "press 'Enter' to continue ..."
 }
 
@@ -394,19 +403,77 @@ do_initblog_hexo()
         read -p "press 'Enter' to continue ..."
         return
     fi
+    local tmptest
+    local hepath=`pathfix $(cd $CFGHEXOBLOGPATH; pwd)`
+    hexo 2>&1 >/dev/null
+    if [ 0 -ne $? ]; then
+        echo "Hexo is NOT installed! Please install it first." >&2
+        read -p "press 'Enter' to continue ..."
+        return
+    fi
 
+    while read MYLINE; do
+        tmptest=`echo $MYLINE | grep ^server`
+        if [ 0 -eq ${#tmptest} ]; then
+            continue
+        else
+            break
+        fi
+    done <<$MYEOF
+`hexo --cwd $hepath`
+$MYEOF
+
+    if [ 0 -eq ${#tmptest} ];  then
+        echo "Hexo is installed, but your hexo blog does NOT exist." >&2
+        echo "Init your hexo blog in up menu => 'Hexo manage'." >&2
+        read -p "press 'Enter' to continue ..."
+        return
+    fi
+
+    if [ ! -d "${hepath}source" ]; then
+        echo "Perhaps your Hexo blog is NOT initialized properly." >&2
+        echo "Reinit your hexo blog in up menu => 'Hexo manage'." >&2
+        read -p "press 'Enter' to continue ..."
+        return
+    fi
+
+    # copy default source/ to .defsource/ for further use
+    if [ ! -d "${hepath}.defsource" ]; then
+        cp -RL "${hepath}source" "${hepath}.defsource" 2>/dev/null
+    fi
+    if [ 0 -ne $? ]; then
+        echo "Operation failed. Please check user permissions."
+        read -p "press 'Enter' to continue ..."
+        return
+    fi
+
+    # copy .defsource/ to $CFGHEXOMYSOURCE
     if [ -d "$CFGHEXOMYSOURCE" ]; then
         echo "Warning: Your blog folder Exists! Action will clear All files in it!"
         read -p "Continue the action: (no)" MYLINE
         if [ ! "${MYLINE,,}" = "y" ] && [ ! "${MYLINE,,}" = "yes" ]; then
             return
         fi
+        rm -rf "$CFGHEXOMYSOURCE" 2>/dev/null
+        if [ 0 -ne $? ]; then
+            echo "Operation failed. Please check user permissions."
+            read -p "press 'Enter' to continue ..."
+            return
+        fi
     fi
 
+    cp -R "${hepath}.defsource" "$CFGHEXOMYSOURCE" 2>/dev/null
+    if [ 0 -ne $? ]; then
+        echo "Operation failed. Please check user permissions."
+        read -p "press 'Enter' to continue ..."
+        return
+    fi
+
+    echo "Blog inited from Hexo's source/ folder."
     read -p "press 'Enter' to continue ..."
 }
 
-# Menu 1
+# Menu 2
 menu_mysource()
 {
     while [ : ]; do
@@ -434,14 +501,14 @@ menu_mysource
 while [ : ] ; do
     echo "THis is a hexo blog helper. Select what you want:"
     select MYSEL in \
-        "Mysouce manage" \
         "Hexo manage" \
+        "Mysouce manage" \
         "Blog edit" \
         "Exit" \
     ; do
         case $REPLY in
-            1) menu_mysource ;;
-            2) : ;;
+            1) : ;;
+            2) menu_mysource ;;
             3) menu_myblog ;;
             4) : ;;
         esac

@@ -65,6 +65,8 @@ if [ 0 -eq ${#CFGPAGESIZE} ]; then
     exit 1
 fi
 
+
+
 # create a new draft
 do_new_draft()
 {

@@ -503,15 +503,132 @@ menu_mysource()
     done
 }
 
+# Install Hexo server
+do_install_hserver()
+{
+    # change dir to basepath
+    cd $BASEPATH > /dev/null
+
+    if [ -d "$CFGHEXOBLOGPATH" ]; then
+        echo "Your hexo server EXISTS! Old hexo server files will be removed!"
+        echo "You should relink hexo server to your blog files in up menu => 'Mysouce manage'."
+        read -p "Continue the action: (no)" MYLINE
+        if [ ! "${MYLINE,,}" = "y" ] && [ ! "${MYLINE,,}" = "yes" ]; then
+            return
+        fi
+
+        rm -rf "$CFGHEXOBLOGPATH" 2>/dev/null
+        if [ 0 -ne $? ]; then
+            echo "Operation failed. Please check user permissions."
+            read -p "press 'Enter' to continue ..."
+            return
+        fi
+    fi
+
+    # node check
+    node -v >/dev/null 2>&1
+    if [ 0 -ne $? ]; then
+        echo "Nodejs is NOT installed! Please install it first." >&2
+        read -p "press 'Enter' to continue ..."
+        return
+    fi
+
+    # npm check
+    local cmdnpm="n"
+    npm -v >/dev/null 2>&1
+    if [ 0 -eq $? ]; then
+        cmdnpm="y"
+    fi
+
+    # yarn check
+    local cmdyarn="n"
+    yarn -v >/dev/null 2>&1
+    if [ 0 -eq $? ]; then
+        cmdyarn="y"
+    fi
+
+    local npcmd=""
+    if [ "$cmdyarn" = "y" ]; then
+        npcmd="yarn"
+    elif [ "$cmdnpm" = "y" ]; then
+        npcmd="npm"
+    fi
+
+    if [ ${#npcmd} -eq 0 ]; then
+        echo "npm/yarn is NOT available! Please install it first." >&2
+        read -p "press 'Enter' to continue ..."
+        return
+    fi
+    
+    # install hexo
+    hexo >/dev/null 2>&1
+    if [ 0 -ne $? ]; then
+        if [ `id -u` -eq 0 ]; then
+            # do as root
+            if [ "$npcmd"="yarn" ]; then
+                $npcmd global add hexo-cli
+            else
+                $npcmd install hexo-cli -g
+            fi
+        else
+            # no root
+            if [ "$npcmd"="yarn" ]; then
+                sudo $npcmd global add hexo-cli
+            else
+                sudo $npcmd install hexo-cli -g
+            fi
+        fi
+
+        if [ 0 -ne $? ]; then
+            echo "Can NOT install hexo. Be sure to run with root permissions." >&2
+            read -p "press 'Enter' to continue ..."
+            return
+        fi
+    fi
+
+    echo "Installing hexo server ..., please wait!"
+    hexo init "$CFGHEXOBLOGPATH" && cd "$CFGHEXOBLOGPATH" && $npcmd install
+    if [ 0 -ne $? ]; then
+        echo "Installation failed!"
+        read -p "press 'Enter' to continue ..."
+        return
+    fi
+
+    echo "Installation succeeded!"
+    echo "You should relink hexo server to your blog files in up menu => 'Mysouce manage'."
+    read -p "press 'Enter' to continue ..."
+}
+
+# Menu 1
+menu_hexomg()
+{
+    while [ : ]; do
+        clear
+        echo "You can manage your hexo server here."
+        echo "1) (Re)Install Hexo Server"
+        echo "2) (Re)Start Hexo Server"
+        echo "3) Stop Hexo Server"
+        echo "4) Back"
+        read -p "Your choice: " MYLINE
+        case $MYLINE in
+            1) do_install_hserver ;;
+            2) : ;;
+            3) : ;;
+            4) break ;;
+        esac
+    done
+}
+
 # test
-menu_mysource
+#menu_mysource
+menu_hexomg
 
 # Main menu
 : <<$MYEOF
 while [ : ] ; do
     echo "THis is a hexo blog helper. Select what you want:"
     select MYSEL in \
-        "Hexo manage" \
+        "Hexo server" \
         "Mysouce manage" \
         "Blog edit" \
         "Exit" \

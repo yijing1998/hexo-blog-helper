@@ -471,6 +471,14 @@ $MYEOF
         return
     fi
 
+    local mspath=`pathfix $(cd $CFGHEXOMYSOURCE; pwd)`
+    ln -s "$mspath" "${hepath}source" 2>/dev/null
+    if [ 0 -ne $? ]; then
+        echo "Operation failed. Please check user permissions."
+        read -p "press 'Enter' to continue ..."
+        return
+    fi
+
     echo "Blog inited from Hexo's source/ folder."
     read -p "press 'Enter' to continue ..."
 }

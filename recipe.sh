@@ -636,6 +636,14 @@ do_install_mytheme()
         return
     fi
 
+    # check git installation
+    git version >/dev/null 2>&1
+    if [ 0 -ne $? ]; then
+        echo "Git is not proper installed. Please install it first!"
+        read -p "press 'Enter' to continue ..."
+        return
+    fi
+
     # check installed theme
     if [ -d "${hepath}themes/${CFGMYTHEMENAME}" ]; then
         echo "Your theme Exists! Action will remove it!"

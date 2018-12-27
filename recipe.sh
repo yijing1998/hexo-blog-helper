@@ -605,11 +605,65 @@ do_install_hserver()
     read -p "press 'Enter' to continue ..."
 }
 
-# install my themem
+# install my theme
 do_install_mytheme()
 {
-  
+    # check if theme repo/name is set
+    if [ 0 -eq ${#CFGMYTHEMEREPO} ]; then
+        echo "Theme repo is NOT set! Do Nothing!"
+        read -p "press 'Enter' to continue ..."
+        return
+    fi
+    if [ 0 -eq ${#CFGMYTHEMENAME} ]; then
+        echo "Theme name is NOT set! Do Nothing!"
+        read -p "press 'Enter' to continue ..."
+        return
+    fi
+
+    # change dir to basepath
+    cd $BASEPATH > /dev/null
+
+    if [ ! -d "$CFGHEXOBLOGPATH" ]; then
+        echo "Hexo server is not proper installed 1. Please install it first!"
+        read -p "press 'Enter' to continue ..."
+        return
+    fi
+
+    local hepath=`pathfix $(cd $CFGHEXOBLOGPATH; pwd)`
+    if [ ! -d "${hepath}themes" ]; then
+        echo "Hexo server is not proper installed 2. Please install it first!"
+        read -p "press 'Enter' to continue ..."
+        return
+    fi
+
+    # check installed theme
+    if [ -d "${hepath}themes/${CFGMYTHEMENAME}" ]; then
+        echo "Your theme Exists! Action will remove it!"
+        read -p "Are you sure to reinstall it?: (no)" MYLINE
+        if [ ! "${MYLINE,,}" = "y" ] && [ ! "${MYLINE,,}" = "yes" ]; then
+            return
+        fi
+        rm -rf "${hepath}themes/${CFGMYTHEMENAME}" 2>/dev/null
+        if [ 0 -ne $? ]; then
+            echo "rm failed. Please check user permissions."
+            read -p "press 'Enter' to continue ..."
+            return
+        fi
+    fi
+
+    # do git clone
+    echo "Installing your theme, please wait..."
+    git clone "$CFGMYTHEMEREPO" "${hepath}themes/${CFGMYTHEMENAME}"
+    if [ 0 -ne $? ]; then
+        echo "Can NOT git clone from $CFGMYTHEMEREPO, please check your theme settings!"
+        read -p "press 'Enter' to continue ..."
+        return
+    fi
+
+    echo "Installation of Hexo theme succeeded"
+    read -p "press 'Enter' to continue ..."
 }
+
 # Menu 1
 menu_hexomg()
 {
@@ -617,13 +671,13 @@ menu_hexomg()
         clear
         echo "You can manage your hexo server here."
         echo "1) (Re)Install Hexo Server"
-        echo "2) (Re)Install my theme"
+        echo "2) (Re)Install My theme"
         echo "3) Stop Hexo Server"
         echo "4) Back"
         read -p "Your choice: " MYLINE
         case $MYLINE in
             1) do_install_hserver ;;
-            2) : ;;
+            2) do_install_mytheme ;;
             3) : ;;
             4) break ;;
         esac

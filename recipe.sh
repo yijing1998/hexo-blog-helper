@@ -580,7 +580,7 @@ do_install_hserver()
         fi
 
         if [ 0 -ne $? ]; then
-            echo "Can NOT install hexo. Be sure to run with root permissions." >&2
+            echo "Can NOT install hexo. Be sure to run with root privileges." >&2
             read -p "press 'Enter' to continue ..."
             return
         fi
@@ -594,11 +594,22 @@ do_install_hserver()
         return
     fi
 
+    # It's in the very directory, mv source .defsource
+    mv source .defsource 2>/dev/null
+    if [ 0 -ne $? ]; then
+      echo "Can NOT mv files, please check user permissions!"
+    fi
+
     echo "Installation succeeded!"
     echo "You should relink hexo server to your blog files in up menu => 'Mysouce manage'."
     read -p "press 'Enter' to continue ..."
 }
 
+# install my themem
+do_install_mytheme()
+{
+  
+}
 # Menu 1
 menu_hexomg()
 {
@@ -606,7 +617,7 @@ menu_hexomg()
         clear
         echo "You can manage your hexo server here."
         echo "1) (Re)Install Hexo Server"
-        echo "2) (Re)Start Hexo Server"
+        echo "2) (Re)Install my theme"
         echo "3) Stop Hexo Server"
         echo "4) Back"
         read -p "Your choice: " MYLINE

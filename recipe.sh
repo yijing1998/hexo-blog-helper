@@ -672,22 +672,72 @@ do_install_mytheme()
     read -p "press 'Enter' to continue ..."
 }
 
+# show hexo server status
+show_hexosever_status()
+{
+    # check COPROC_PID existence
+    if [ 0 -eq ${#COPROC_PID} ]; then
+        echo "Hexo server status: NOT running!"
+    else
+        echo "Hexo server status: IS runing! PID: $COPROC_PID"
+    fi
+}
+
+do_start_hexoserver()
+{
+    # change dir to basepath
+    cd $BASEPATH > /dev/null
+
+    # hexo server folder check
+    if [ ! -d "$CFGHEXOBLOGPATH" ]; then
+        echo "Your Hexo server folder is missing. Please reinstall hexo server!"
+        read -p "press 'Enter' to continue ..."
+        return
+    fi
+
+    # hexo and hexo server check
+    hexo >/dev/null 2>&1
+    if [ 0 -ne $? ]; then
+        echo "Hexo is NOT installed! Please reinstall hexo server!"
+        read -p "press 'Enter' to continue ..."
+        return
+    fi
+
+    local hepath=`pathfix $(cd $CFGHEXOBLOGPATH; pwd)`
+    pwd
+    echo $hepath
+
+    # check COPROC_PID existence
+    if [ 0 -ne ${#COPROC_PID} ]; then
+        kill $COPROC_PID
+    fi
+    echo "Staring hexo server, please wait..."
+    coproc hexo server
+    echo "Hexo server started!"
+    read -p "press 'Enter' to continue ..."
+}
+
 # Menu 1
 menu_hexomg()
 {
     while [ : ]; do
         clear
+        show_hexosever_status
         echo "You can manage your hexo server here."
         echo "1) (Re)Install Hexo Server"
-        echo "2) (Re)Install My theme"
-        echo "3) Stop Hexo Server"
-        echo "4) Back"
+        echo "2) (Re)Install My Theme"
+        echo "3) (Re)Start Hexo Server"
+        echo "4) Stop Hexo Server"
+        echo "5) Refresh Hexo Sever Status"
+        echo "6) Back"
         read -p "Your choice: " MYLINE
         case $MYLINE in
             1) do_install_hserver ;;
             2) do_install_mytheme ;;
-            3) : ;;
-            4) break ;;
+            3) do_start_hexoserver ;;
+            4) : ;;
+            5) : ;;
+            6) break ;;
         esac
     done
 }

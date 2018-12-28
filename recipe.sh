@@ -675,11 +675,16 @@ do_install_mytheme()
 # show hexo server status
 show_hexosever_status()
 {
-    # check COPROC_PID existence
-    if [ 0 -eq ${#COPROC_PID} ]; then
-        echo "Hexo server status: NOT running!"
+    # check hexo_server_info existence
+    local hsinfo
+    if [ -f .hexo_server_info ]; then
+        hsinfo=(`cat .hexo_server_info`)
+    fi
+    
+    if [ -n "${hsinfo[0]}" ]; then
+        echo "Hexo server status: IS runing! PID: ${hsinfo[0]}"
     else
-        echo "Hexo server status: IS runing! PID: $COPROC_PID"
+        echo "Hexo server status: NOT running!"
     fi
 }
 
@@ -704,16 +709,49 @@ do_start_hexoserver()
     fi
 
     local hepath=`pathfix $(cd $CFGHEXOBLOGPATH; pwd)`
-    pwd
-    echo $hepath
+    local hsinfo
+    # read out hexo server info(pid, fdin, fdout) from .hexo_server_info
+    if [ -f .hexo_server_info ]; then
+        hsinfo=(`cat .hexo_server_info`)
+    fi
 
-    # check COPROC_PID existence
-    if [ 0 -ne ${#COPROC_PID} ]; then
-        kill $COPROC_PID
+    if [ -n "${hsinfo[0]}" ]; then
+        echo "Stopping the existing server..."
+        kill ${hsinfo[0]}
+        sleep 3s
     fi
     echo "Staring hexo server, please wait..."
-    coproc hexo server
-    echo "Hexo server started!"
+    coproc hexo server --cwd=$hepath
+    sleep 3s
+    if [ -z "$COPROC_PID" ]; then
+        cat /dev/null > .hexo_server_info
+        echo "Can't start hexo server in 3 seconds!"
+    else
+        echo $COPROC_PID ${COPROC[0]} ${COPROC[1]} > .hexo_server_info
+        echo "Hexo server started!"
+    fi
+
+    read -p "press 'Enter' to continue ..."
+}
+
+do_stop_hexoserver()
+{
+    local hsinfo
+    # read out hexo server info(pid, fdin, fdout) from .hexo_server_info
+    if [ -f .hexo_server_info ]; then
+        hsinfo=(`cat .hexo_server_info`)
+    fi
+
+    if [ -n "${hsinfo[0]}" ]; then
+        echo "Stopping the existing server..."
+        kill ${hsinfo[0]}
+        sleep 3s
+        cat /dev/null > .hexo_server_info
+        echo "Hexo server stopped!"
+    else
+        echo "No hexo server is running, do nothing!"
+    fi
+
     read -p "press 'Enter' to continue ..."
 }
 
@@ -735,7 +773,7 @@ menu_hexomg()
             1) do_install_hserver ;;
             2) do_install_mytheme ;;
             3) do_start_hexoserver ;;
-            4) : ;;
+            4) do_stop_hexoserver ;;
             5) : ;;
             6) break ;;
         esac

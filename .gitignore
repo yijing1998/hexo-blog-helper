@@ -1,5 +1,2 @@
 Thumbs.db
-logs
-ufiles/
-hexofolder/
-themes/
+.hexo_server_info

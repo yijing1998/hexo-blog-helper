@@ -383,17 +383,6 @@ menu_myblog()
     done
 }
 
-# check if hexo is installed
-hexook()
-{
-    hexo version 2>&1 1>/dev/null
-    if [ 0 -ne $? ]; then
-        return 1
-    fi
-
-    return 0
-}
-
 # init blog folders from Hexo
 do_initblog_hexo()
 {
@@ -405,51 +394,17 @@ do_initblog_hexo()
         read -p "press 'Enter' to continue ..."
         return
     fi
-    local tmptest
+
     local hepath=`pathfix $(cd $CFGHEXOBLOGPATH; pwd)`
-    hexo 2>&1 >/dev/null
-    if [ 0 -ne $? ]; then
-        echo "Hexo is NOT installed! Please install it first." >&2
-        read -p "press 'Enter' to continue ..."
-        return
-    fi
-
-    while read MYLINE; do
-        tmptest=`echo $MYLINE | grep ^server`
-        if [ 0 -eq ${#tmptest} ]; then
-            continue
-        else
-            break
-        fi
-    done <<$MYEOF
-`hexo --cwd $hepath`
-$MYEOF
-
-    if [ 0 -eq ${#tmptest} ];  then
-        echo "Hexo is installed, but your hexo blog does NOT exist." >&2
-        echo "Init your hexo blog in up menu => 'Hexo manage'." >&2
-        read -p "press 'Enter' to continue ..."
-        return
-    fi
-
-    if [ ! -d "${hepath}source" ]; then
-        echo "Perhaps your Hexo blog is NOT initialized properly." >&2
-        echo "Reinit your hexo blog in up menu => 'Hexo manage'." >&2
-        read -p "press 'Enter' to continue ..."
-        return
-    fi
-
-    # copy default source/ to .defsource/ for further use
-    if [ ! -d "${hepath}.defsource" ]; then
-        cp -RL "${hepath}source" "${hepath}.defsource" 2>/dev/null
-    fi
-    if [ 0 -ne $? ]; then
-        echo "Operation failed. Please check user permissions."
-        read -p "press 'Enter' to continue ..."
-        return
-    fi
-
+    
     # copy .defsource/ to $CFGHEXOMYSOURCE
+    if [ ! -d "${hepath}.defsource" ]; then
+        echo "Seems your Hexo server was not properly installed!"
+        echo "Please reinstall hexo in up menu => 'Hexo manage'"
+        echo -p "press 'Enter' to continue ..."
+        return
+    fi
+
     if [ -d "$CFGHEXOMYSOURCE" ]; then
         echo "Warning: Your blog folder Exists! Action will clear All files in it!"
         read -p "Continue the action: (no)" MYLINE
@@ -471,7 +426,14 @@ $MYEOF
         return
     fi
 
+    # create symlink
     local mspath=`pathfix $(cd $CFGHEXOMYSOURCE; pwd)`
+    rm -rf "${hepath}source" 2>/dev/null
+    if [ 0 -ne $? ]; then
+        echo "Operation failed. Please check user permissions."
+        read -p "press 'Enter' to continue ..."
+        return
+    fi
     ln -s "$mspath" "${hepath}source" 2>/dev/null
     if [ 0 -ne $? ]; then
         echo "Operation failed. Please check user permissions."
@@ -480,7 +442,14 @@ $MYEOF
     fi
 
     echo "Blog inited from Hexo's source/ folder."
+    echo "And blog folder is linked to hexo server"
     read -p "press 'Enter' to continue ..."
+}
+
+# init blog folders from Git
+do_initblog_git()
+{
+
 }
 
 # Menu 2
@@ -489,16 +458,18 @@ menu_mysource()
     while [ : ]; do
         clear
         echo "You can manage your blog folders here."
-        echo "1) Init blog folders from Hexo"
-        echo "2) Init blog folders from Git"
-        echo "3) Simple Git Syncronize"
-        echo "4) Back"
+        echo "1) Init blog folder from Hexo"
+        echo "2) Init blog folder from Git"
+        echo "3) Link blog folder to Hexo server"
+        echo "4) Simple Git Syncronize"
+        echo "5) Back"
         read -p "Your choice: " MYLINE
         case $MYLINE in
             1) do_initblog_hexo ;;
-            2) : ;;
+            2) do_initblog_git ;;
             3) : ;;
-            4) break ;;
+            4) : ;;
+            5) break ;;
         esac
     done
 }
@@ -797,7 +768,7 @@ menu_hexomg()
 }
 
 # test
-#menu_mysource
+menu_mysource
 
 # Main menu
 : <<$MYEOF

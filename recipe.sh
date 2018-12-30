@@ -510,7 +510,7 @@ do_install_hserver()
     cd $BASEPATH > /dev/null
 
     if [ -d "$CFGHEXOBLOGPATH" ]; then
-        echo "Your hexo server EXISTS! Old hexo server files will be removed!"
+        echo "Your hexo server folder EXISTS! Old hexo server files will be removed!"
         echo "You should relink hexo server to your blog files in up menu => 'Mysouce manage'."
         read -p "Continue the action: (no)" MYLINE
         if [ ! "${MYLINE,,}" = "y" ] && [ ! "${MYLINE,,}" = "yes" ]; then
@@ -554,7 +554,7 @@ do_install_hserver()
         npcmd="npm"
     fi
 
-    if [ ${#npcmd} -eq 0 ]; then
+    if [ -z "$npcmd" ]; then
         echo "npm/yarn is NOT available! Please install it first." >&2
         read -p "press 'Enter' to continue ..."
         return
@@ -598,6 +598,12 @@ do_install_hserver()
     mv source .defsource 2>/dev/null
     if [ 0 -ne $? ]; then
       echo "Can NOT mv files, please check user permissions!"
+    fi
+
+    # create symlink to 'source/'
+    ln -s .defsource source 2>/dev/null
+    if [ 0 -ne $? ]; then
+      echo "Can NOT create symlink to 'source/', please check user permissions!"
     fi
 
     echo "Installation succeeded!"
@@ -709,6 +715,16 @@ do_start_hexoserver()
     fi
 
     local hepath=`pathfix $(cd $CFGHEXOBLOGPATH; pwd)`
+
+    # check symlink source/'s existence
+    local tmpstr=`ls -l "$hepath" | grep "^l.*[[:space:]]source[[:space:]]->"`
+    if [ -z "$tmpstr" ]; then
+        echo "Hexo server does NOT link to any blog files!"
+        echo "Link hexo server to your blog files in up menu => 'Mysouce manage'."
+        read -p "press 'Enter' to continue ..."
+        return
+    fi
+
     local hsinfo
     # read out hexo server info(pid, fdin, fdout) from .hexo_server_info
     if [ -f .hexo_server_info ]; then
@@ -744,7 +760,7 @@ do_stop_hexoserver()
 
     if [ -n "${hsinfo[0]}" ]; then
         echo "Stopping the existing server..."
-        kill ${hsinfo[0]}
+        kill ${hsinfo[0]} 2>/dev/null
         sleep 3s
         cat /dev/null > .hexo_server_info
         echo "Hexo server stopped!"
@@ -782,7 +798,6 @@ menu_hexomg()
 
 # test
 #menu_mysource
-menu_hexomg
 
 # Main menu
 : <<$MYEOF
@@ -795,7 +810,7 @@ while [ : ] ; do
         "Exit" \
     ; do
         case $REPLY in
-            1) : ;;
+            1) menu_hexomg ;;
             2) menu_mysource ;;
             3) menu_myblog ;;
             4) : ;;

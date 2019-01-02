@@ -42,30 +42,59 @@ done <<$MYEOF
 $MYEOF
 
 # check basic configs
-if [ 0 -eq ${#CFGHEXOBLOGPATH} ]; then
+if [ -z "${CFGHEXOBLOGPATH}" ]; then
     echo "config: CFGHEXOBLOGPATH is missing!" 1>&2
     echo "Please set it up in: recipe.conf!" 1>&2
     exit 1
 fi
 
-if [ 0 -eq ${#CFGHEXOMYSOURCE} ]; then
+if [ -z "${CFGHEXOMYSOURCE}" ]; then
     echo "config: CFGHEXOMYSOURCE is missing!" 1>&2
     echo "Please set it up in: recipe.conf!" 1>&2
     exit 1
 fi
+
 if [ "${CFGHEXOMYSOURCE}" = "/" ]; then
     echo "config: CFGHEXOMYSOURCE can NOT be '/'!" 1>&2
     echo "Please correct it in: recipe.conf!" 1>&2
     exit 1
 fi
 
-if [ 0 -eq ${#CFGPAGESIZE} ]; then
+if [ -z "${CFGPAGESIZE}" ]; then
     echo "config: CFGPAGESIZE is missing!" 1>&2
     echo "Please set it up in: recipe.conf!" 1>&2
     exit 1
 fi
 
+if [ -z "${CFGGITUSERNAME}" ]; then
+    echo "config: CFGGITUSERNAME is missing!" 1>&2
+    echo "Please set it up in: recipe.conf!" 1>&2
+    exit 1
+fi
 
+if [ -z "${CFGGITUSEREMAIL}" ]; then
+    echo "config: CFGGITUSEREMAIL is missing!" 1>&2
+    echo "Please set it up in: recipe.conf!" 1>&2
+    exit 1
+fi
+
+if [ -z "${CFGGITMYSOURCE}" ]; then
+    echo "config: CFGGITMYSOURCE is missing!" 1>&2
+    echo "Please set it up in: recipe.conf!" 1>&2
+    exit 1
+fi
+
+if [ "${CFGGITMYSOURCE%%:*}" != "git@github.com" ]; then
+    echo "config: CFGGITMYSOURCE must be SSH flavor!" 1>&2
+    echo "Please correct it in: recipe.conf!" 1>&2
+    exit 1
+fi
+
+if [ -z "${CFGGITMYSOURCEKEY}" ]; then
+    echo "config: CFGGITMYSOURCEKEY is missing!" 1>&2
+    echo "Please set it up in: recipe.conf!" 1>&2
+    exit 1
+fi
 
 # create a new draft
 do_new_draft()
@@ -383,6 +412,19 @@ menu_myblog()
     done
 }
 
+# user.name user.email upstream
+setup_git()
+{
+    git config --local user.name "${CFGGITUSERNAME}" && \
+    git config --local user.email "${CFGGITUSEREMAIL}" && \
+    git config --local push.default simple && \
+    git add . >/dev/null 2>&1 && \
+    git commit -a -m "first commit! by hexo-blog-helper" >/dev/null 2>&1 && \
+    git remote add origin ${CFGGITMYSOURCE} && \
+    git fetch origin master && \
+    git branch -u origin/master
+}
+
 # init blog folders from Hexo
 do_initblog_hexo()
 {
@@ -443,13 +485,21 @@ do_initblog_hexo()
 
     echo "Blog inited from Hexo's source/ folder."
     echo "And blog folder is linked to hexo server"
+
+    git version >/dev/null 2>&1
+    if [ $? -ne 0 ]; then
+        echo "Git is not properly installed!"
+    else
+        cd ${mspath} && git init >/dev/null 2>&1 && setup_git
+    fi
+
     read -p "press 'Enter' to continue ..."
 }
 
 # init blog folders from Git
 do_initblog_git()
 {
-
+    :
 }
 
 # Menu 2
@@ -708,7 +758,7 @@ do_start_hexoserver()
         sleep 3s
     fi
     echo "Staring hexo server, please wait..."
-    coproc hexo server --cwd=$hepath
+    coproc hexo server --cwd=$hepath --draft
     sleep 3s
     if [ -z "$COPROC_PID" ]; then
         cat /dev/null > .hexo_server_info

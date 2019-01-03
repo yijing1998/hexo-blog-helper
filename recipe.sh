@@ -412,17 +412,39 @@ menu_myblog()
     done
 }
 
-# user.name user.email upstream
-setup_git()
+# push to an empty remote repo
+setup_git1()
 {
     git config --local user.name "${CFGGITUSERNAME}" && \
     git config --local user.email "${CFGGITUSEREMAIL}" && \
     git config --local push.default simple && \
+    git config --local core.sshcommand "ssh -o IdentityFile=${CFGGITMYSOURCEKEY}" && \
     git add . >/dev/null 2>&1 && \
     git commit -a -m "first commit! by hexo-blog-helper" >/dev/null 2>&1 && \
-    git remote add origin ${CFGGITMYSOURCE} && \
-    git fetch origin master && \
-    git branch -u origin/master
+    git remote add origin ${CFGGITMYSOURCE}
+    
+    # push to remote repo
+    git push -u origin master >/dev/null 2>&1
+    if [ 0 -ne $? ]; then
+        echo "Can't push local files to remote repo: ${CFGGITMYSOURCE}"
+        echo "Please check the followings:"
+        echo "1. Your remote repo is not empty => choose 'Init blog folder from Git'"
+        echo "2. Is your git sshkey ok?"
+        echo "3. Is remote repo's url ok?"
+        echo "4. Is your networking connection ok?"
+        return
+    fi
+    echo "Git setting is done!"
+}
+
+# clone from a remote repo
+setup_git2()
+{
+    git config --local user.name "${CFGGITUSERNAME}" && \
+    git config --local user.email "${CFGGITUSEREMAIL}" && \
+    git config --local push.default simple && \
+    git config --local core.sshcommand "ssh -o IdentityFile=${CFGGITMYSOURCEKEY}"
+    echo "Git setting is done!"
 }
 
 # init blog folders from Hexo
@@ -485,12 +507,15 @@ do_initblog_hexo()
 
     echo "Blog inited from Hexo's source/ folder."
     echo "And blog folder is linked to hexo server"
+    echo
+    echo "Git setting begins ..."
+    sleep 3s
 
     git version >/dev/null 2>&1
     if [ $? -ne 0 ]; then
         echo "Git is not properly installed!"
     else
-        cd ${mspath} && git init >/dev/null 2>&1 && setup_git
+        cd ${mspath} && git init >/dev/null 2>&1 && setup_git1
     fi
 
     read -p "press 'Enter' to continue ..."
@@ -499,7 +524,63 @@ do_initblog_hexo()
 # init blog folders from Git
 do_initblog_git()
 {
-    :
+    # change dir to basepath
+    cd $BASEPATH > /dev/null
+
+    if [ ! -d "$CFGHEXOBLOGPATH" ]; then
+        echo "Your hexo folder doesn't exist. Create it in up menu => 'Hexo manage'." >&2
+        read -p "press 'Enter' to continue ..."
+        return
+    fi
+
+    local hepath=`pathfix $(cd $CFGHEXOBLOGPATH; pwd)`
+
+    if [ -d "$CFGHEXOMYSOURCE" ]; then
+        echo "Warning: Your blog folder Exists! Action will clear All files in it!"
+        read -p "Continue the action: (no)" MYLINE
+        if [ ! "${MYLINE,,}" = "y" ] && [ ! "${MYLINE,,}" = "yes" ]; then
+            return
+        fi
+        rm -rf "$CFGHEXOMYSOURCE" 2>/dev/null
+        if [ 0 -ne $? ]; then
+            echo "Operation failed. Please check user permissions."
+            read -p "press 'Enter' to continue ..."
+            return
+        fi
+    fi
+
+    echo "Git setting begins ..."
+    sleep 3s
+    local mspath
+    git version >/dev/null 2>&1
+    if [ $? -ne 0 ]; then
+        echo "Git is not properly installed!"
+    else
+        git clone "${CFGGITMYSOURCE}" "${CFGHEXOMYSOURCE}" >/dev/null 2>&1
+        if [ 0 -ne $? ]; then
+            echo "Can't clone from remote repo: ${CFGGITMYSOURCE}"
+            echo "Please check the followings:"
+            echo "1. Do you have enough rights to access the parent folder of: ${CFGHEXOMYSOURCE}"
+            echo "2. Is your remote repo url ok?"
+            echo "3. Is your git sshkey ok?"
+        else
+            mspath=`pathfix $(cd $CFGHEXOMYSOURCE; pwd)`
+            cd ${mspath} && setup_git2
+
+            # link to hexo server
+            if [ -e "${hepath}source" ]; then
+                rm -f "${hepath}source"
+            fi
+            ln -s "$mspath" "${hepath}source" 2>/dev/null
+            if [ 0 -ne $? ]; then
+                echo "Can't link blog folder to hexo server. Please check user permissions."
+            else
+                echo "Blog folder is linked to hexo server"
+            fi
+        fi
+    fi
+
+    read -p "press 'Enter' to continue ..."
 }
 
 # Menu 2
@@ -510,16 +591,14 @@ menu_mysource()
         echo "You can manage your blog folders here."
         echo "1) Init blog folder from Hexo"
         echo "2) Init blog folder from Git"
-        echo "3) Link blog folder to Hexo server"
-        echo "4) Simple Git Syncronize"
-        echo "5) Back"
+        echo "3) Simple Git Syncronize"
+        echo "4) Back"
         read -p "Your choice: " MYLINE
         case $MYLINE in
             1) do_initblog_hexo ;;
             2) do_initblog_git ;;
             3) : ;;
-            4) : ;;
-            5) break ;;
+            4) break ;;
         esac
     done
 }
@@ -817,30 +896,20 @@ menu_hexomg()
     done
 }
 
-# test
-menu_mysource
-
 # Main menu
-: <<$MYEOF
 while [ : ] ; do
+    clear
     echo "THis is a hexo blog helper. Select what you want:"
-    select MYSEL in \
-        "Hexo server" \
-        "Mysouce manage" \
-        "Blog edit" \
-        "Exit" \
-    ; do
-        case $REPLY in
-            1) menu_hexomg ;;
-            2) menu_mysource ;;
-            3) menu_myblog ;;
-            4) : ;;
-        esac
-        break
-    done
-    if [ $REPLY -eq 4 ]; then
-        break
-    fi
+    echo "1) Hexo server"
+    echo "2) Mysouce manage"
+    echo "3) Blog edit"
+    echo "4) Exit"
+    read -p "Your choice: " MYLINE
+    case $MYLINE in
+        1) menu_hexomg ;;
+        2) menu_mysource ;;
+        3) menu_myblog ;;
+        4) break ;;
+    esac
 done
-$MYEOF
 
